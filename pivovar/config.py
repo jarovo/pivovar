@@ -1,0 +1,17 @@
+REQ_TEMP = 80
+
+(
+    WATER_PUMP_RLY,
+    HOT_COLD_WATER_RLY,
+    DRAIN_RLY,
+    LYE_REC_RLY,
+    WATER_REC_RLY,
+    AIR_RLY,
+    CO2_RLY
+) = range(100, 107)
+
+ON = HOT = 1
+OFF = COLD = 0
+
+MODBUS_ADDR = '127.0.0.1'
+DEFAULT_PRIO = 10
