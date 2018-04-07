@@ -6,7 +6,8 @@ except ImportError:
     from mock import patch
 
 @patch('pivovar.wash.backend')
-def test_temp_ready(backend):
+@patch('pivovar.wash.sched')
+def test_temp_ready(backend, sched):
     backend.temp.return_value = cfg.REQ_TEMP
     wash.temp_ready()
 
