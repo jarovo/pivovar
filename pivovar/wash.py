@@ -1,5 +1,5 @@
 from __future__ import print_function
-import sched, time
+import time
 import logging
 import pivovar.config as cfg
 
@@ -24,13 +24,9 @@ class UniPi(object):
         raise NotImplementedError()
 
 
-class Scheduler(object):
-    def __init__(self):
-        self._scheduler = sched.scheduler(time.time, time.sleep)
-
-    def schedule(delay, prio, action):
-        logging.debug("Scheduled action %s after %d seconds.", action, delay)
-        self._scheduler.enter(delay, prio, action, ())
+def reset():
+    for rly, state in cfg.RESET_RLY_STATES:
+        set_output(rly,state)
 
 
 def temp_ready():
@@ -40,11 +36,13 @@ def temp_ready():
 
 
 def prewash():
-    sched.schedule(0, lambda: set_output(WATER_PUMP_RLY, ON))
-    sched.schedule(10, lambda: set_output(WATER_PUMP_RLY, OFF))
+    reset()
+    set_output(cfg.WATER_PUMP_RLY, cfg.ON)
+    time.sleep(30)
+    set_output(cfg.WATER_PUMP_RLY, cfg.OFF)
 
 def rinsing():
-    raise NotImplementedError()
+    set_output(cfg.DRAIN_RLY, cfg.ON)
 
 def wash_with_lye():
     raise NotImplementedError()
@@ -63,18 +61,28 @@ def filling_with_co2():
 
 
 def wash_the_keg():
+    reset()
     while not temp_ready():
         sleep(10)
-
+    reset()
     prewash()
+
+    reset()
     wash_with_lye()
+
+    reset()
     drain_lye()
+
+    reset()
     hot_wash()
+
+    reset()
     drying()
+
+    reset()
     filling_with_co2()
 
 def main():
-    sched = Scheduler()
     backend = UniPi()
     logging.basicConfig(level=logging.DEBUG)
     run_keg_wash()
