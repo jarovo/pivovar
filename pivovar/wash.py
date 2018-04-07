@@ -43,10 +43,13 @@ def prewash():
     sched.schedule(0, lambda: set_output(WATER_PUMP_RLY, ON))
     sched.schedule(10, lambda: set_output(WATER_PUMP_RLY, OFF))
 
-def lye_wash():
+def rinsing():
     raise NotImplementedError()
 
-def lye_drain():
+def wash_with_lye():
+    raise NotImplementedError()
+
+def drain_lye():
     raise NotImplementedError()
 
 def hot_wash():
@@ -55,7 +58,7 @@ def hot_wash():
 def drying():
     raise NotImplementedError()
 
-def co2_fill():
+def filling_with_co2():
     raise NotImplementedError()
 
 
@@ -64,11 +67,11 @@ def wash_the_keg():
         sleep(10)
 
     prewash()
-    lye_wash()
-    lye_drain()
+    wash_with_lye()
+    drain_lye()
     hot_wash()
     drying()
-    co2_fill()
+    filling_with_co2()
 
 def main():
     sched = Scheduler()
