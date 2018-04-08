@@ -9,6 +9,9 @@ backend = None
 def log_time(arg):
     logging.debug("From print_time", arg, time.time())
 
+def delay(seconds):
+    time.sleep(seconds)
+
 
 class UniPi(object):
     def __init__():
@@ -38,48 +41,57 @@ def temp_ready():
 def prewash():
     reset()
     set_output(cfg.WATER_PUMP_RLY, cfg.ON)
-    time.sleep(30)
+    delay(30)
     set_output(cfg.WATER_PUMP_RLY, cfg.OFF)
 
-def rinsing():
+def draining():
     set_output(cfg.DRAIN_RLY, cfg.ON)
+    delay(10)
+    set_output(cfg.DRAIN_RLY, cfg.OFF)
 
 def wash_with_lye():
-    raise NotImplementedError()
+    set_output(cfg.LYE_RLY, cfg.ON)
+    delay(10)
+    set_output(cfg.LYE_RECIRCULATION_RLY, cfg.ON)
+    delay(50)
+    set_output(cfg.LYE_RLY, cfg.OFF)
+    delay(10)
+    set_output(cfg.LYE_RECIRCULATION_RLY, cfg.OFF)
 
-def drain_lye():
-    raise NotImplementedError()
+def wash_with_water(rly):
+    set_output(cfg.DRAIN_RLY, cfg.ON)
+    set_output(rly, cfg.ON)
+    delay(30)
+    set_output(cfg.DRAIN_RLY, cfg.OFF)
+    set_output(rly, cfg.OFF)
+    set_output(cfg.DRAIN_RLY, cfg.ON)  # TODO(jhenner) Discuss the validity of this.
 
-def hot_wash():
-    raise NotImplementedError()
+def wash_with_cold_water():
+    wash_with_water(cfg.COLD_WATER_RLY)
+
+def wash_with_hot_water():
+    wash_with_water(cfg.HOT_WATER_RLY)
 
 def drying():
-    raise NotImplementedError()
+    set_output(cfg.AIR_RLY, cfg.ON)
+    delay(10)
+    set_output(cfg.DRAIN_RLY, cfg.ON)
+    delay(20)
+    set_output(cfg.DRAIN_RLY, cfg.OFF)
+    set_output(cfg.AIR_RLY, cfg.OFF)
 
 def filling_with_co2():
-    raise NotImplementedError()
+    set_output(cfg.CO2_RLY, cfg.ON)
 
 
 def wash_the_keg():
-    reset()
     while not temp_ready():
         sleep(10)
-    reset()
     prewash()
-
-    reset()
     wash_with_lye()
-
-    reset()
-    drain_lye()
-
-    reset()
-    hot_wash()
-
-    reset()
+    wash_with_cold_water()
+    wash_with_hot_water()
     drying()
-
-    reset()
     filling_with_co2()
 
 def main():
