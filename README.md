@@ -1,5 +1,6 @@
 # Pivovar.
 
+[![Build Status](https://travis-ci.org/jaryn/pivovar.svg?branch=master)](https://travis-ci.org/jaryn/pivovar)
 
 ## Algorithm.
 
