@@ -30,7 +30,7 @@ class UniPi(object):
 
 
 def reset():
-    for rly, state in cfg.RESET_RLY_STATES:
+    for rly, state in cfg.RESET_RLY_STATES.items():
         backend.set_output(rly, state)
 
 
