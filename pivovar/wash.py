@@ -18,7 +18,7 @@ def delay(seconds):
 class UniPi(object):
     def __init__(self):
         from pymodbus.client.sync import ModbusTcpClient
-        self.modbus = ModbusTcpClient('')
+        self.modbus = ModbusTcpClient(cfg.MODBUS_ADDR)
 
     def set_output(self, output, state):
         logging.debug("Setting output %s to %s", output, state)
