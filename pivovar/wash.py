@@ -40,9 +40,9 @@ def temp_ready():
 
 def prewash():
     reset()
-    backend.set_output(cfg.WATER_PUMP_RLY, cfg.ON)
+    backend.set_output(cfg.COLD_WATER_RLY, cfg.ON)
     delay(30)
-    backend.set_output(cfg.WATER_PUMP_RLY, cfg.OFF)
+    backend.set_output(cfg.COLD_WATER_RLY, cfg.OFF)
 
 
 def draining():
