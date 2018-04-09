@@ -35,7 +35,7 @@ def reset():
 
 
 def temp_ready():
-    backend.temp() >= cfg.REQ_TEMP
+    return backend.temp() >= cfg.REQ_TEMP
 
 
 def prewash():
