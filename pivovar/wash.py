@@ -1,10 +1,17 @@
 from __future__ import print_function
-import time
+import atexit
 import logging
+import subprocess
+import time
+import signal
+
+import sshtunnel
+
 import pivovar.config as cfg
 
 sched = None
 backend = None
+server = None
 
 
 def log_time(arg):
@@ -15,10 +22,43 @@ def delay(seconds):
     time.sleep(seconds)
 
 
+def create_modbus_tunnel():
+    global server
+    if server:
+        return
+    server = sshtunnel.SSHTunnelForwarder(
+        cfg.TUNNEL_REMOTE_ADDR,
+        ssh_username="pi",
+        ssh_password="raspberry",
+        remote_bind_address=('127.0.0.1', cfg.TUNNEL_REMOTE_BIND_PORT),
+        local_bind_address=('0.0.0.0', cfg.TUNNEL_LOCAL_PORT)
+    )
+    logging.debug('Starting paramiko port forwarding for modbus connection.')
+    server.start()
+    logging.debug('Started paramiko port forwarding for modbus connection.')
+    # import ipdb
+    # ipdb.set_trace
+
+
+def close_modbus_tunnel():
+    server.stop()
+    logging.debug('Stopped ssh port forwarding for modbus connection.')
+
+
 class UniPi(object):
     def __init__(self):
         from pymodbus.client.sync import ModbusTcpClient
-        self.modbus = ModbusTcpClient(cfg.MODBUS_ADDR)
+        tun = SSHTunnel(cfg.TUNNEL_REMOTE_ADDR, 'pi', cfg.TUNNEL_LOCAL_PORT,
+                        cfg.TUNNEL_REMOTE_BIND_PORT, cfg.MODBUS_ADDR)
+        tun.connect()
+        atexit.register(tun.disconnect)
+        signal.signal(signal.SIGINT, lambda x, y: tun.disconnect())
+
+        logging.info('Connecting to modbus. %s:%s',
+                     cfg.MODBUS_ADDR,
+                     cfg.MODBUS_PORT)
+        time.sleep(1)
+        self.modbus = ModbusTcpClient(cfg.MODBUS_ADDR, cfg.MODBUS_PORT)
 
     def set_output(self, output, state):
         logging.debug("Setting output %s to %s", output, state)
@@ -26,7 +66,37 @@ class UniPi(object):
         # TODO(jhenner) Really do the setting of the output.
 
     def temp(self):
-        raise NotImplementedError()
+        return cfg.REQ_TEMP
+
+
+class SSHTunnel(object):
+    def __init__(self, remote_address, user, local_port, remote_port,
+                 remote_bind_address):
+        self.remote_address = remote_address
+        self.user = user
+        self.local_port = local_port
+        self.remote_port = remote_port
+        self.remote_bind_address = remote_bind_address
+        self.tunproc = None
+
+    def connect(self):
+        if self.tunproc:
+            raise Exception('Already connected.')
+
+        logging.debug('Starting ssh port forwarding for modbus connection.')
+
+        args = ("ssh", "-N", "-L",
+                "{0.local_port}:{0.remote_bind_address}:{0.remote_port}"
+                .format(self),
+                "{0.user}@{0.remote_address}"
+                .format(self))
+        self.tunproc = subprocess.Popen(args, stdin=None)
+
+        logging.debug('Started ssh port forwarding for modbus connection.')
+
+    def disconnect(self):
+        self.tunproc.terminate()
+        logging.debug('Stopped ssh port forwarding for modbus connection.')
 
 
 def reset():
@@ -95,11 +165,11 @@ def filling_with_co2():
 
 def wash_the_keg():
     while not temp_ready():
-        delay(10)
         logging.debug(
             'Waiting for water (temp %d) to get to required temperature: %d.',
             backend.temp(),
             cfg.REQ_TEMP)
+        delay(10)
     prewash()
     wash_with_lye()
     wash_with_cold_water()
@@ -109,9 +179,9 @@ def wash_the_keg():
 
 
 def main():
+    logging.basicConfig(level=logging.DEBUG)
     global backend
     backend = UniPi()
-    logging.basicConfig(level=logging.DEBUG)
     reset()
     wash_the_keg()
 
