@@ -5,8 +5,6 @@ import subprocess
 import time
 import signal
 
-import sshtunnel
-
 import pivovar.config as cfg
 
 sched = None
@@ -20,29 +18,6 @@ def log_time(arg):
 
 def delay(seconds):
     time.sleep(seconds)
-
-
-def create_modbus_tunnel():
-    global server
-    if server:
-        return
-    server = sshtunnel.SSHTunnelForwarder(
-        cfg.TUNNEL_REMOTE_ADDR,
-        ssh_username="pi",
-        ssh_password="raspberry",
-        remote_bind_address=('127.0.0.1', cfg.TUNNEL_REMOTE_BIND_PORT),
-        local_bind_address=('0.0.0.0', cfg.TUNNEL_LOCAL_PORT)
-    )
-    logging.debug('Starting paramiko port forwarding for modbus connection.')
-    server.start()
-    logging.debug('Started paramiko port forwarding for modbus connection.')
-    # import ipdb
-    # ipdb.set_trace
-
-
-def close_modbus_tunnel():
-    server.stop()
-    logging.debug('Stopped ssh port forwarding for modbus connection.')
 
 
 class UniPi(object):
