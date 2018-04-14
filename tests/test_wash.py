@@ -1,17 +1,18 @@
 import logging
 
-from pivovar import wash
+from pivovar import phases
 from pivovar import config as cfg
 try:
-    from unittest.mock import patch
+    from unittest.mock import MagicMock
 except ImportError:
-    from mock import patch
+    from mock import MagicMock
 
 
 logging.basicConfig(level=logging.DEBUG)
 
 
-@patch('pivovar.wash.backend')
-def test_temp_ready(backend):
+def test_temp_ready():
+    backend = MagicMock()
     backend.temp.return_value = cfg.REQ_TEMP
-    wash.temp_ready()
+    phases.delay = MagicMock()
+    phases.wash_the_keg(backend)
