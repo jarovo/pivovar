@@ -67,7 +67,7 @@ class SSHTunnel(object):
 
 
 def main():
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     backend = UniPi()
     phases.wash_the_keg(backend)
 
