@@ -29,8 +29,12 @@ class UniPi(object):
         self.modbus = ModbusTcpClient(cfg.MODBUS_ADDR, cfg.MODBUS_PORT)
 
     def set_output(self, output, state):
-        logging.debug("Setting output %s to %s", output, state)
+        logging.debug("Setting output coil %s to %s", output, state)
         self.modbus.write_coil(output, state)
+
+    def set_register(self, address, value):
+        logging.debug("Setting register %s to 0x%x", address, value)
+        self.modbus.write_register(address, value)
 
     def temp(self):
         return cfg.REQ_TEMP

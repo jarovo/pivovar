@@ -14,10 +14,9 @@ def delay(seconds):
 
 def reset(backend):
     phase_logger.info('Reset.')
-    for rly, state in cfg.RESET_RLY_STATES.items():
-        backend.set_output(rly, state)
-    for out in phase_signals:
-        backend.set_output(out, cfg.OFF)
+    backend.set_register(cfg.RELAYS_REG_ADDR, 0x00)
+    backend.set_register(cfg.ULED_REG_ADDR, 0x00)
+    backend.set_register(cfg.DIGITAL_OUTPUT_REG_ADDR, 0x00)
 
 
 def temp_ready(backend):
