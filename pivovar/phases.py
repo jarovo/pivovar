@@ -40,6 +40,16 @@ def system_flush(backend, ticks):
     backend.set_output(cfg.AIR_RLY, cfg.OFF)
 
 
+def heating(backend):
+    phase_logger.info('Heating.')
+    while not temp_ready(backend):
+        logging.info(
+            'Waiting for water (temp %d) to get to required temperature: %d.',
+            backend.temp(),
+            cfg.REQ_TEMP)
+        delay(10)
+
+
 def prewash(backend):
     phase_logger.info('Prewashing.')
     backend.set_output(phase_signals[0], cfg.ON)
@@ -68,8 +78,7 @@ def wash_with_lye(backend):
     system_flush(backend, 1)
 
 
-# TODO(jhenner) Rename to rinse_with_cold_water
-def wash_with_cold_water(backend):
+def rinse_with_cold_water(backend):
     phase_logger.info('Washing with cold water.')
     backend.set_output(phase_signals[3], cfg.ON)
 
@@ -117,19 +126,12 @@ def fill_with_co2(backend):
 
 
 def wash_the_keg(backend):
-    reset(backend)
-    while not temp_ready(backend):
-        logging.info(
-            'Waiting for water (temp %d) to get to required temperature: %d.',
-            backend.temp(),
-            cfg.REQ_TEMP)
-        delay(10)
-
     wash_cycle = (
+        heating,
         prewash,
         drain,
         wash_with_lye,
-        wash_with_cold_water,
+        rinse_with_cold_water,
         wash_with_hot_water,
         dry,
         fill_with_co2
