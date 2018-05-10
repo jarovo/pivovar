@@ -26,6 +26,7 @@ def reset(backend):
     backend.set_register(cfg.RELAYS_REG_ADDR, 0x00)
     backend.set_register(cfg.ULED_REG_ADDR, 0x00)
     backend.set_register(cfg.DIGITAL_OUTPUT_REG_ADDR, 0x00)
+    time.sleep(cfg.MOTOR_VALVE_TRANSITION_SECONDS)
 
 
 def temp_ready(backend):
