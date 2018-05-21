@@ -1,9 +1,12 @@
 from __future__ import print_function
+from abc import ABCMeta
 import atexit
 import logging
 import subprocess
 import time
 import signal
+
+from jsonrpclib import Server
 
 import pivovar.config as cfg
 from pivovar import phases
@@ -14,6 +17,20 @@ def log_time(arg):
 
 
 class UniPi(object):
+    __metaclass__ = ABCMeta
+
+    ALL_RLYS = (cfg.AIR_RLY, cfg.PUMP_RLY, cfg.LYE_OR_WATER_RLY, cfg.CO2_RLY,
+                cfg.COLD_WATER_RLY, cfg.DRAIN_OR_RECIRCULATION_RLY,
+                cfg.DRAIN_RLY)
+
+    def __init__(self):
+        pass
+
+    def set_output(self, output, state):
+        logging.debug("Setting output '%s' to '%s'", output, state)
+
+
+class UniPiModbus(UniPi):
     def __init__(self):
         from pymodbus.client.sync import ModbusTcpClient
         tun = SSHTunnel(cfg.TUNNEL_REMOTE_ADDR, 'pi', cfg.TUNNEL_LOCAL_PORT,
@@ -29,15 +46,12 @@ class UniPi(object):
         self.modbus = ModbusTcpClient(cfg.MODBUS_ADDR, cfg.MODBUS_PORT)
 
     def set_output(self, output, state):
-        logging.debug("Setting output coil %s to %s", output, state)
-        self.modbus.write_coil(output, state)
+        UniPi.set_output(self, output, state)
+        self.write_coil(output, state)
 
     def set_register(self, address, value):
         logging.debug("Setting register %s to 0x%x", address, value)
         self.modbus.write_register(address, value)
-
-    def temp(self):
-        return cfg.REQ_TEMP
 
 
 class SSHTunnel(object):
@@ -70,9 +84,36 @@ class SSHTunnel(object):
         logging.debug('Stopped ssh port forwarding for modbus connection.')
 
 
+class UniPiJSONRPC(UniPi):
+    def __init__(self):
+        UniPi.__init__(self)
+        self.server = Server(cfg.UNIPI_JSONRPC_ADDRESS)
+
+    def set_output(self, output, state):
+        UniPi.set_output(self, output, state)
+        try:
+            return self.server.relay_set(output, state)
+        # Ignore the exception caused by issue
+        # https://github.com/UniPiTechnology/evok/issues/57
+        except TypeError:
+            pass
+
+    def get_output(self, output):
+        UniPi.get_output(output)
+        return self.server.relay_get(output)[0]
+
+    def temp(self):
+        try:
+            return self.server.sensor_get(cfg.TEMP_SENSOR)[0]
+        # Ignore the exception caused by issue
+        # https://github.com/UniPiTechnology/evok/issues/57
+        except TypeError:
+            pass
+
+
 def main():
-    logging.basicConfig(level=logging.INFO)
-    backend = UniPi()
+    logging.basicConfig(level=logging.DEBUG)
+    backend = UniPiJSONRPC()
     phases.wash_the_keg(backend)
 
 

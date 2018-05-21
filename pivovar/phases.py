@@ -5,27 +5,24 @@ import pivovar.config as cfg
 
 phase_logger = logging.getLogger('phase')
 
-phase_signals = (0, 1, 2, 3, 9, 10, 11)
-motor_valve_signal = 8
-""" Modbus coil to turn on in each program phase."""
-
 
 def delay(ticks):
     time.sleep(ticks * cfg.TICK)
 
 
 def turn_motor_valve(backend, relay, state):
-    backend.set_output(motor_valve_signal, cfg.ON)
+    backend.set_output(cfg.MOTOR_VALVE_TRANSITIONING, cfg.ON)
     backend.set_output(relay, state)
     time.sleep(cfg.MOTOR_VALVE_TRANSITION_SECONDS)
-    backend.set_output(motor_valve_signal, cfg.OFF)
+    backend.set_output(cfg.MOTOR_VALVE_TRANSITIONING, cfg.OFF)
 
 
 def reset(backend):
     phase_logger.info('Reset.')
-    backend.set_register(cfg.RELAYS_REG_ADDR, 0x00)
-    backend.set_register(cfg.ULED_REG_ADDR, 0x00)
-    backend.set_register(cfg.DIGITAL_OUTPUT_REG_ADDR, 0x00)
+    for output in cfg.PHASE_SIGNALS:
+        backend.set_output(output, False)
+    for rly in backend.ALL_RLYS:
+        backend.set_output(rly, False)
     time.sleep(cfg.MOTOR_VALVE_TRANSITION_SECONDS)
 
 
@@ -45,15 +42,19 @@ def heating(backend):
     phase_logger.info('Heating.')
     while not temp_ready(backend):
         logging.info(
-            'Waiting for water (temp %d) to get to required temperature: %d.',
+            'Waiting for water (actual temperature %.2f) to get to required '
+            'temperature: %.2f.',
             backend.temp(),
             cfg.REQ_TEMP)
-        delay(10)
+        time.sleep(15)
+    logging.info(
+        'Water ready (actual temperature %.2f. Required %.2f)',
+        backend.temp(), cfg.REQ_TEMP)
 
 
 def prewash(backend):
     phase_logger.info('Prewashing.')
-    backend.set_output(phase_signals[0], cfg.ON)
+    backend.set_output(cfg.PHASE_SIGNALS[0], cfg.ON)
 
     backend.set_output(cfg.COLD_WATER_RLY, cfg.ON)
     delay(30)
@@ -62,26 +63,27 @@ def prewash(backend):
 
 def drain(backend):
     phase_logger.info('Draining.')
-    backend.set_output(phase_signals[1], cfg.ON)
+    backend.set_output(cfg.PHASE_SIGNALS[1], cfg.ON)
 
-    system_flush(backend, 10)
+    turn_motor_valve(backend, cfg.DRAIN_OR_RECIRCULATION_RLY, cfg.DRAIN)
+    backend.set_output(cfg.DRAIN_RLY, cfg.ON)
+    delay(30)
 
 
 def wash_with_lye(backend):
     phase_logger.info('Washing with lye.')
-    backend.set_output(phase_signals[2], cfg.ON)
+    backend.set_output(cfg.PHASE_SIGNALS[2], cfg.ON)
 
     turn_motor_valve(backend, cfg.LYE_OR_WATER_RLY, cfg.LYE)
     backend.set_output(cfg.PUMP_RLY, cfg.ON)
     delay(50)
     backend.set_output(cfg.PUMP_RLY, cfg.OFF)
     turn_motor_valve(backend, cfg.LYE_OR_WATER_RLY, cfg.WATER)
-    system_flush(backend, 1)
 
 
 def rinse_with_cold_water(backend):
     phase_logger.info('Washing with cold water.')
-    backend.set_output(phase_signals[3], cfg.ON)
+    backend.set_output(cfg.PHASE_SIGNALS[3], cfg.ON)
 
     turn_motor_valve(backend, cfg.DRAIN_OR_RECIRCULATION_RLY,
                      cfg.RECIRCULATION)
@@ -94,7 +96,7 @@ def rinse_with_cold_water(backend):
 
 def wash_with_hot_water(backend):
     phase_logger.info('Washing with hot water.')
-    backend.set_output(phase_signals[4], cfg.ON)
+    backend.set_output(cfg.PHASE_SIGNALS[4], cfg.ON)
 
     turn_motor_valve(backend, cfg.DRAIN_OR_RECIRCULATION_RLY,
                      cfg.RECIRCULATION)
@@ -106,7 +108,7 @@ def wash_with_hot_water(backend):
 
 def dry(backend):
     phase_logger.info('Drying.')
-    backend.set_output(phase_signals[5], cfg.ON)
+    backend.set_output(cfg.PHASE_SIGNALS[5], cfg.ON)
 
     turn_motor_valve(backend, cfg.DRAIN_OR_RECIRCULATION_RLY, cfg.DRAIN)
     backend.set_output(cfg.AIR_RLY, cfg.ON)
@@ -117,7 +119,7 @@ def dry(backend):
 
 def fill_with_co2(backend):
     phase_logger.info('Filling with CO2.')
-    backend.set_output(phase_signals[6], cfg.ON)
+    backend.set_output(cfg.PHASE_SIGNALS[6], cfg.ON)
 
     backend.set_output(cfg.DRAIN_RLY, cfg.OFF)
     backend.set_output(cfg.CO2_RLY, cfg.ON)
