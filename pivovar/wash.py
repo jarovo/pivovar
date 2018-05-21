@@ -102,6 +102,9 @@ class UniPiJSONRPC(UniPi):
         UniPi.get_output(output)
         return self.server.relay_get(output)[0]
 
+    def get_input(self, input):
+        return self.server.input_get(input)[0]
+
     def temp(self):
         try:
             return self.server.sensor_get(cfg.TEMP_SENSOR)[0]
@@ -114,7 +117,7 @@ class UniPiJSONRPC(UniPi):
 def main():
     logging.basicConfig(level=logging.DEBUG)
     backend = UniPiJSONRPC()
-    phases.wash_the_keg(backend)
+    phases.wash_the_kegs(backend)
 
 
 if __name__ == '__main__':

@@ -38,6 +38,13 @@ def system_flush(backend, ticks):
     backend.set_output(cfg.AIR_RLY, cfg.OFF)
 
 
+def wait_for_keg(backend):
+    phase_logger.info('Waiting for keg.')
+    logging.info('Waiting for keg.')
+    while not backend.get_input(cfg.KEG_PRESENT):
+        delay(10)
+
+
 def heating(backend):
     phase_logger.info('Heating.')
     while not temp_ready(backend):
@@ -56,9 +63,11 @@ def prewash(backend):
     phase_logger.info('Prewashing.')
     backend.set_output(cfg.PHASE_SIGNALS[0], cfg.ON)
 
-    backend.set_output(cfg.COLD_WATER_RLY, cfg.ON)
-    delay(30)
-    backend.set_output(cfg.COLD_WATER_RLY, cfg.OFF)
+    for i in range(10):
+        backend.set_output(cfg.COLD_WATER_RLY, cfg.ON)
+        delay(2)
+        backend.set_output(cfg.COLD_WATER_RLY, cfg.OFF)
+        delay(1)
 
 
 def drain(backend):
@@ -130,7 +139,6 @@ def fill_with_co2(backend):
 
 def wash_the_keg(backend):
     wash_cycle = (
-        heating,
         prewash,
         drain,
         wash_with_lye,
@@ -142,3 +150,12 @@ def wash_the_keg(backend):
     for phase in wash_cycle:
         reset(backend)
         phase(backend)
+
+
+def wash_the_kegs(backend):
+    while True:
+        wait_for_keg(backend)
+        heating(backend),
+        logging.info('Keg present and hot water is ready. '
+                     'The washing process can start now.')
+        wash_the_keg(backend)

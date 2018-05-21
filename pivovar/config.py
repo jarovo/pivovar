@@ -10,6 +10,8 @@ COLD_WATER_RLY = 'al_cold_water'
 DRAIN_OR_RECIRCULATION_RLY = 'al_drain_or_recirculation'
 DRAIN_RLY = 'al_drain'
 
+KEG_PRESENT = 'al_keg_present'
+
 # Define relay constants.
 ON = LYE = RECIRCULATION = 1
 OFF = WATER = DRAIN = 0
