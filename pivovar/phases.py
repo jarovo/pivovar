@@ -20,9 +20,11 @@ def turn_motor_valve(backend, relay, state):
 def reset(backend):
     phase_logger.info('Reset.')
     for output in cfg.PHASE_SIGNALS:
-        backend.set_output(output, False)
+        if backend.get_output(output):
+            backend.set_output(output, False)
     for rly in backend.ALL_RLYS:
-        backend.set_output(rly, False)
+        if backend.get_output(output):
+            backend.set_output(rly, False)
     time.sleep(cfg.MOTOR_VALVE_TRANSITION_SECONDS)
 
 
