@@ -1,6 +1,7 @@
 REQ_TEMP = 24.0
 """ Temperature of hot water to wait for. """
 TEMP_SENSOR = '287DD88304000063'
+HEATING_SLEEP_SECONDS = 3
 
 AIR_RLY = 'al_air'
 PUMP_RLY = 'al_pump'
@@ -10,11 +11,14 @@ COLD_WATER_RLY = 'al_cold_water'
 DRAIN_OR_RECIRCULATION_RLY = 'al_drain_or_recirculation'
 DRAIN_RLY = 'al_drain'
 
+ALL_RLYS = (AIR_RLY, PUMP_RLY, LYE_OR_WATER_RLY, CO2_RLY, COLD_WATER_RLY,
+            DRAIN_OR_RECIRCULATION_RLY, DRAIN_RLY)
+
 KEG_PRESENT = 'al_keg_present'
 
 # Define relay constants.
-ON = LYE = RECIRCULATION = 1
-OFF = WATER = DRAIN = 0
+ON = LYE = RECIRCULATION = True
+OFF = WATER = DRAIN = False
 
 # Define registers.
 RELAYS_REG_ADDR = 101

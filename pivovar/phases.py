@@ -38,11 +38,26 @@ def system_flush(backend, ticks):
     backend.set_output(cfg.AIR_RLY, cfg.OFF)
 
 
+def pulse(backend, rly, count, duration, duty_cycle=0.5):
+    i = 0
+    period = float(duration) / count
+    t_on = period * duty_cycle
+    t_off = period * (1 - duty_cycle)
+    while True:
+        i += 1
+        backend.set_output(rly, cfg.ON)
+        delay(t_on)
+        backend.set_output(rly, cfg.OFF)
+        if i >= count:
+            break
+        delay(t_off)
+
+
 def wait_for_keg(backend):
     phase_logger.info('Waiting for keg.')
     logging.info('Waiting for keg.')
     while not backend.get_input(cfg.KEG_PRESENT):
-        delay(10)
+        time.sleep(.01)
 
 
 def heating(backend):
@@ -53,7 +68,7 @@ def heating(backend):
             'temperature: %.2f.',
             backend.temp(),
             cfg.REQ_TEMP)
-        time.sleep(15)
+        time.sleep(cfg.HEATING_SLEEP_SECONDS)
     logging.info(
         'Water ready (actual temperature %.2f. Required %.2f)',
         backend.temp(), cfg.REQ_TEMP)
@@ -63,11 +78,7 @@ def prewash(backend):
     phase_logger.info('Prewashing.')
     backend.set_output(cfg.PHASE_SIGNALS[0], cfg.ON)
 
-    for i in range(10):
-        backend.set_output(cfg.COLD_WATER_RLY, cfg.ON)
-        delay(2)
-        backend.set_output(cfg.COLD_WATER_RLY, cfg.OFF)
-        delay(1)
+    pulse(backend, cfg.COLD_WATER_RLY, 5, 30, 0.8)
 
 
 def drain(backend):
@@ -76,7 +87,10 @@ def drain(backend):
 
     turn_motor_valve(backend, cfg.DRAIN_OR_RECIRCULATION_RLY, cfg.DRAIN)
     backend.set_output(cfg.DRAIN_RLY, cfg.ON)
-    delay(30)
+    backend.set_output(cfg.AIR_RLY, cfg.ON)
+    delay(5)
+    backend.set_output(cfg.DRAIN_RLY, cfg.OFF)
+    backend.set_output(cfg.AIR_RLY, cfg.OFF)
 
 
 def wash_with_lye(backend):
