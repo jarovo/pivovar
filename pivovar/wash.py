@@ -7,6 +7,7 @@ import time
 import signal
 
 from jsonrpclib import Server
+from jsonrpclib.jsonrpc import ProtocolError
 
 import pivovar.config as cfg
 from pivovar import phases
@@ -88,30 +89,56 @@ class UniPiJSONRPC(UniPi):
     def __init__(self):
         UniPi.__init__(self)
         self.server = Server(cfg.UNIPI_JSONRPC_ADDRESS)
+        self.check()
 
     def set_output(self, output, state):
         UniPi.set_output(self, output, state)
-        try:
-            return self.server.relay_set(output, state)
-        # Ignore the exception caused by issue
-        # https://github.com/UniPiTechnology/evok/issues/57
-        except TypeError:
-            pass
+        return self.server.relay_set(output, state)
 
     def get_output(self, output):
-        UniPi.get_output(output)
-        return self.server.relay_get(output)[0]
+        ret = self.server.relay_get(output)
+
+        # For user LEDs, the returned entity is a direct value, not a list.
+        if isinstance(ret, list):
+            return ret[0]
+        else:
+            return ret
 
     def get_input(self, input):
         return self.server.input_get(input)[0]
 
     def temp(self):
+        return self.server.sensor_get(cfg.TEMP_SENSOR)[0]
+
+    def check(self):
+        failed = False
+        for rly in (cfg.ALL_RLYS + cfg.PHASE_SIGNALS +
+                    (cfg.MOTOR_VALVE_TRANSITIONING,)):
+            logging.info('Checking whether output named "%s" exists.', rly)
+            try:
+                self.get_output(rly)
+            except ProtocolError:
+                logging.error('Output "%s" not configured in UniPi!', rly)
+                failed = True
+
+        for inp in (cfg.KEG_PRESENT,):
+            logging.info('Checking input named "%s" exists.', inp)
+            try:
+                self.get_input(inp)
+            except ProtocolError:
+                logging.error('Input "%s" not configured in UniPi!', inp)
+                failed = True
+
+        logging.info('Checking sensor named "%s" exists.', cfg.TEMP_SENSOR)
         try:
-            return self.server.sensor_get(cfg.TEMP_SENSOR)[0]
-        # Ignore the exception caused by issue
-        # https://github.com/UniPiTechnology/evok/issues/57
-        except TypeError:
-            pass
+            self.server.sensor_get(cfg.TEMP_SENSOR)
+        except ProtocolError:
+                logging.error('Sensor "%s" not found!', cfg.TEMP_SENSOR)
+                failed = True
+
+        if failed:
+            raise Exception('Failed to find some inputs or outputs! '
+                            'Check the logs for more details.')
 
 
 def main():
