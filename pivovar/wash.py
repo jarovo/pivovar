@@ -11,6 +11,7 @@ from jsonrpclib.jsonrpc import ProtocolError
 
 import pivovar.config as cfg
 from pivovar import phases
+from pivovar.webserver import WebServer
 
 
 def log_time(arg):
@@ -89,7 +90,6 @@ class UniPiJSONRPC(UniPi):
     def __init__(self):
         UniPi.__init__(self)
         self.server = Server(cfg.UNIPI_JSONRPC_ADDRESS)
-        self.check()
 
     def set_output(self, output, state):
         UniPi.set_output(self, output, state)
@@ -144,6 +144,11 @@ class UniPiJSONRPC(UniPi):
 def main():
     logging.basicConfig(level=logging.DEBUG)
     backend = UniPiJSONRPC()
+
+    web = WebServer()
+    web.start()
+
+    backend.check()
     phases.wash_the_kegs(backend)
 
 
