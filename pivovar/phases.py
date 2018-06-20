@@ -146,11 +146,9 @@ def fill_with_co2(backend):
     phase_logger.info('Filling with CO2.')
     backend.set_output(cfg.PHASE_SIGNALS[6], cfg.ON)
 
-    backend.set_output(cfg.DRAIN_RLY, cfg.OFF)
     backend.set_output(cfg.CO2_RLY, cfg.ON)
     delay(10)
     backend.set_output(cfg.CO2_RLY, cfg.OFF)
-    backend.set_output(cfg.DRAIN_RLY, cfg.OFF)
 
 
 def wash_the_keg(backend):
