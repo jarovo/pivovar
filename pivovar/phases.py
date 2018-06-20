@@ -173,3 +173,4 @@ def wash_the_kegs(backend):
         logging.info('Keg present and hot water is ready. '
                      'The washing process can start now.')
         wash_the_keg(backend)
+        reset(backend)
