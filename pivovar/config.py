@@ -43,8 +43,4 @@ MOTOR_VALVE_TRANSITIONING = 'al_motor_valve_transitioning'
 """ Seconds per single 'tick'. """
 
 
-PHASE_SIGNALS = ('al_prewashing', 'al_draining', 'al_washing_with_lye',
-                 'al_washing_with_cold_water', 'al_washing_with_hot_water',
-                 'al_drying', 'al_filling_with_co2')
-
 TICK = 1

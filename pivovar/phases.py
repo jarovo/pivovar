@@ -26,19 +26,14 @@ def delay(ticks):
 
 
 def turn_motor_valve(backend, relay, state):
-    backend.set_output(cfg.MOTOR_VALVE_TRANSITIONING, cfg.ON)
     backend.set_output(relay, state)
     time.sleep(cfg.MOTOR_VALVE_TRANSITION_SECONDS)
-    backend.set_output(cfg.MOTOR_VALVE_TRANSITIONING, cfg.OFF)
 
 
 @phase("reset")
 def reset(backend):
-    for output in cfg.PHASE_SIGNALS:
-        if backend.get_output(output):
-            backend.set_output(output, False)
     for rly in backend.ALL_RLYS:
-        if backend.get_output(output):
+        if backend.get_output(rly):
             backend.set_output(rly, False)
     time.sleep(cfg.MOTOR_VALVE_TRANSITION_SECONDS)
 
@@ -93,15 +88,11 @@ def heating(backend):
 
 @phase('prewashing')
 def prewash(backend):
-    backend.set_output(cfg.PHASE_SIGNALS[0], cfg.ON)
-
     pulse(backend, cfg.COLD_WATER_RLY, 5, 30, 0.8)
 
 
 @phase('draining')
 def drain(backend):
-    backend.set_output(cfg.PHASE_SIGNALS[1], cfg.ON)
-
     turn_motor_valve(backend, cfg.DRAIN_OR_RECIRCULATION_RLY, cfg.DRAIN)
     backend.set_output(cfg.DRAIN_RLY, cfg.ON)
     backend.set_output(cfg.AIR_RLY, cfg.ON)
@@ -112,8 +103,6 @@ def drain(backend):
 
 @phase('washing with lye')
 def wash_with_lye(backend):
-    backend.set_output(cfg.PHASE_SIGNALS[2], cfg.ON)
-
     turn_motor_valve(backend, cfg.LYE_OR_WATER_RLY, cfg.LYE)
     backend.set_output(cfg.PUMP_RLY, cfg.ON)
     delay(50)
@@ -123,8 +112,6 @@ def wash_with_lye(backend):
 
 @phase('washing with cold water')
 def rinse_with_cold_water(backend):
-    backend.set_output(cfg.PHASE_SIGNALS[3], cfg.ON)
-
     turn_motor_valve(backend, cfg.DRAIN_OR_RECIRCULATION_RLY,
                      cfg.RECIRCULATION)
     backend.set_output(cfg.COLD_WATER_RLY, cfg.ON)
@@ -136,8 +123,6 @@ def rinse_with_cold_water(backend):
 
 @phase('washing with hot water')
 def wash_with_hot_water(backend):
-    backend.set_output(cfg.PHASE_SIGNALS[4], cfg.ON)
-
     turn_motor_valve(backend, cfg.DRAIN_OR_RECIRCULATION_RLY,
                      cfg.RECIRCULATION)
     backend.set_output(cfg.PUMP_RLY, cfg.ON)
@@ -148,8 +133,6 @@ def wash_with_hot_water(backend):
 
 @phase('drying')
 def dry(backend):
-    backend.set_output(cfg.PHASE_SIGNALS[5], cfg.ON)
-
     turn_motor_valve(backend, cfg.DRAIN_OR_RECIRCULATION_RLY, cfg.DRAIN)
     backend.set_output(cfg.AIR_RLY, cfg.ON)
     delay(30)
@@ -159,8 +142,6 @@ def dry(backend):
 
 @phase('filling with CO2')
 def fill_with_co2(backend):
-    backend.set_output(cfg.PHASE_SIGNALS[6], cfg.ON)
-
     backend.set_output(cfg.CO2_RLY, cfg.ON)
     delay(10)
     backend.set_output(cfg.CO2_RLY, cfg.OFF)

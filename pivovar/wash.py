@@ -112,8 +112,7 @@ class UniPiJSONRPC(UniPi):
 
     def check(self):
         failed = False
-        for rly in (cfg.ALL_RLYS + cfg.PHASE_SIGNALS +
-                    (cfg.MOTOR_VALVE_TRANSITIONING,)):
+        for rly in cfg.ALL_RLYS:
             logging.info('Checking whether output named "%s" exists.', rly)
             try:
                 self.get_output(rly)
