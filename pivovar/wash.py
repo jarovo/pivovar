@@ -6,11 +6,9 @@ import subprocess
 import time
 import signal
 
-from jsonrpclib import Server
-from jsonrpclib.jsonrpc import ProtocolError
-
 import pivovar.config as cfg
 from pivovar import phases
+from pivovar.jsonrpc import Client, ProtocolError
 
 
 def log_time(arg):
@@ -88,7 +86,7 @@ class SSHTunnel(object):
 class UniPiJSONRPC(UniPi):
     def __init__(self):
         UniPi.__init__(self)
-        self.server = Server(cfg.UNIPI_JSONRPC_ADDRESS)
+        self.server = Client(cfg.UNIPI_JSONRPC_ADDRESS)
         self.check()
 
     def set_output(self, output, state):
