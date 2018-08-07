@@ -11,8 +11,11 @@ from pivovar import phases
 from pivovar.jsonrpc import Client, ProtocolError
 
 
+logger = logging.getLogger('keg_wash')
+
+
 def log_time(arg):
-    logging.debug("From print_time", arg, time.time())
+    logger.debug("From print_time", arg, time.time())
 
 
 class UniPi(object):
@@ -26,7 +29,7 @@ class UniPi(object):
         pass
 
     def set_output(self, output, state):
-        logging.debug("Setting output '%s' to '%s'", output, state)
+        logger.debug("Setting output '%s' to '%s'", output, state)
 
 
 class UniPiModbus(UniPi):
@@ -38,9 +41,8 @@ class UniPiModbus(UniPi):
         atexit.register(tun.disconnect)
         signal.signal(signal.SIGINT, lambda x, y: tun.disconnect())
 
-        logging.info('Connecting to modbus. %s:%s',
-                     cfg.MODBUS_ADDR,
-                     cfg.MODBUS_PORT)
+        logger.info('Connecting to modbus. %s:%s',
+                    cfg.MODBUS_ADDR, cfg.MODBUS_PORT)
         time.sleep(1)
         self.modbus = ModbusTcpClient(cfg.MODBUS_ADDR, cfg.MODBUS_PORT)
 
@@ -49,7 +51,7 @@ class UniPiModbus(UniPi):
         self.write_coil(output, state)
 
     def set_register(self, address, value):
-        logging.debug("Setting register %s to 0x%x", address, value)
+        logger.debug("Setting register %s to 0x%x", address, value)
         self.modbus.write_register(address, value)
 
 
@@ -67,7 +69,7 @@ class SSHTunnel(object):
         if self.tunproc:
             raise Exception('Already connected.')
 
-        logging.debug('Starting ssh port forwarding for modbus connection.')
+        logger.debug('Starting ssh port forwarding for modbus connection.')
 
         args = ("ssh", "-N", "-L",
                 "{0.local_port}:{0.remote_bind_address}:{0.remote_port}"
@@ -76,17 +78,17 @@ class SSHTunnel(object):
                 .format(self))
         self.tunproc = subprocess.Popen(args, stdin=None)
 
-        logging.debug('Started ssh port forwarding for modbus connection.')
+        logger.debug('Started ssh port forwarding for modbus connection.')
 
     def disconnect(self):
         self.tunproc.terminate()
-        logging.debug('Stopped ssh port forwarding for modbus connection.')
+        logger.debug('Stopped ssh port forwarding for modbus connection.')
 
 
 class UniPiJSONRPC(UniPi):
-    def __init__(self):
+    def __init__(self, address):
         UniPi.__init__(self)
-        self.server = Client(cfg.UNIPI_JSONRPC_ADDRESS)
+        self.server = Client(address)
         self.check()
 
     def set_output(self, output, state):
@@ -111,26 +113,26 @@ class UniPiJSONRPC(UniPi):
     def check(self):
         failed = False
         for rly in cfg.ALL_RLYS:
-            logging.info('Checking whether output named "%s" exists.', rly)
+            logger.info('Checking whether output named "%s" exists.', rly)
             try:
                 self.get_output(rly)
             except ProtocolError:
-                logging.error('Output "%s" not configured in UniPi!', rly)
+                logger.error('Output "%s" not configured in UniPi!', rly)
                 failed = True
 
         for inp in (cfg.KEG_PRESENT,):
-            logging.info('Checking input named "%s" exists.', inp)
+            logger.info('Checking input named "%s" exists.', inp)
             try:
                 self.get_input(inp)
             except ProtocolError:
-                logging.error('Input "%s" not configured in UniPi!', inp)
+                logger.error('Input "%s" not configured in UniPi!', inp)
                 failed = True
 
-        logging.info('Checking sensor named "%s" exists.', cfg.TEMP_SENSOR)
+        logger.info('Checking sensor named "%s" exists.', cfg.TEMP_SENSOR)
         try:
             self.server.sensor_get(cfg.TEMP_SENSOR)
         except ProtocolError:
-                logging.error('Sensor "%s" not found!', cfg.TEMP_SENSOR)
+                logger.error('Sensor "%s" not found!', cfg.TEMP_SENSOR)
                 failed = True
 
         if failed:
@@ -139,8 +141,14 @@ class UniPiJSONRPC(UniPi):
 
 
 def main():
-    logging.basicConfig(level=logging.DEBUG)
-    backend = UniPiJSONRPC()
+    logging.basicConfig(level=logging.INFO)
+    import argparse
+    parser = argparse.ArgumentParser(description='Keg washing control.')
+    parser.add_argument('--unipi_jsonrpc', type=str,
+                        default='http://127.0.0.1/rpc',
+                        help='Address to of unipi JSON RPC server.')
+    args = parser.parse_args()
+    backend = UniPiJSONRPC(args.unipi_jsonrpc)
     phases.wash_the_kegs(backend)
 
 
