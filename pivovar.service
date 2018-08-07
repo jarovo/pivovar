@@ -1,0 +1,14 @@
+[Unit]
+Description=Pivovar
+Requires=evok.service
+
+[Service]
+#EnvironmentFile=/etc/sysconfig/pivovar
+ExecStart=/home/pi/pivovar-venv/bin/wash $OPTIONS
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=on-failure
+RestartSec=42s
+
+[Install]
+WantedBy=multi-user.target
