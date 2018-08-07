@@ -1,6 +1,7 @@
 from __future__ import print_function
 from abc import ABCMeta
 import atexit
+import argparse
 import logging
 import subprocess
 import time
@@ -9,6 +10,7 @@ import signal
 import pivovar.config as cfg
 from pivovar import phases
 from pivovar.jsonrpc import Client, ProtocolError
+import pivovar.update
 
 
 def log_time(arg):
@@ -139,6 +141,15 @@ class UniPiJSONRPC(UniPi):
 
 
 def main():
+    parser = argparse.ArgumentParser(description='Wash some kegs.')
+    parser.add_argument('--update-from-branch', dest='branch', action='store',
+                        default=None,
+                        help='Branch to check out')
+
+    args = parser.parse_args()
+    if args.branch:
+        pivovar.update.update(args.branch)
+
     logging.basicConfig(level=logging.DEBUG)
     backend = UniPiJSONRPC()
     phases.wash_the_kegs(backend)
