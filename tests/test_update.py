@@ -14,5 +14,6 @@ def test_machine_id():
                     Kernel: Linux 4.9.41-v7+
               Architecture: arm
       """)
-    assert ('021eba9b75b94f26942263c5cc92c2d6'
-            == update.get_machine_id(hostnamectl))
+
+    d = dict(update.hostnamectl_values(hostnamectl))
+    assert d['Machine ID'] == '021eba9b75b94f26942263c5cc92c2d6'
