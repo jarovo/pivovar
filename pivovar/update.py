@@ -1,9 +1,16 @@
 from contextlib import contextmanager
-import re
+import logging
 import os
+import re
 import subprocess
 import requests
 import yaml
+
+
+VERSIONS_URL = (
+    "https://raw.githubusercontent.com/jaryn/pivovar-versions/master/"
+    "v2018-08-07"
+)
 
 
 @contextmanager
@@ -21,22 +28,19 @@ def hostnamectl_values(hostnamectl):
             yield m.group(1), m.group(2)
 
 
-def get_record(machine_id):
-    url = (
-        "https://raw.githubusercontent.com/jaryn/pivovar-versions/master/"
-        "v2018-08-07"
-    )
-    resp = requests.get(url)
+def get_record(versions_url, machine_id):
+    resp = requests.get(versions_url)
     versions = yaml.load(resp.text)
     return versions[machine_id]
 
 
-def update():
-    path = os.getcwd()
+def update(versions_url):
+    path = os.path.dirname(__file__)
+    logging('Updating repo on path: %s.', path)
+
     hostnamectl = subprocess.check_output('hostnamectl')
     machine_id = dict(hostnamectl_values(hostnamectl))['Machine ID']
-    path = os.path.dirname(__file__)
-    record = get_record(machine_id)
+    record = get_record(versions_url, machine_id)
     if record['packager'] == 'git':
         branch = record['branch']
         repo = record['repo']
@@ -56,7 +60,15 @@ def install():
 
 
 def main():
-    update()
+    import argparse
+    parser = argparse.ArgumentParser(description='Wash some kegs.')
+    parser.add_argument('versions_url', dest='branch', action='store',
+                        default=VERSIONS_URL,
+                        help='URL of versions file.')
+
+    args = parser.parse_args()
+    logging.basicConfig(level=logging.DEBUG)
+    update(args.versions_url)
 
 
 if __name__ == '__main__':
