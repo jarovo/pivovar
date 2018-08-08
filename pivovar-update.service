@@ -1,11 +1,10 @@
 [Unit]
 Description=Pivovar
-Requires=evok.service
-Wants=pivovar-update.service
+Requires=network.target
 
 [Service]
 #EnvironmentFile=/etc/sysconfig/pivovar
-ExecStart=/home/pi/pivovar-venv/bin/wash $OPTIONS
+ExecStart=/home/pi/pivovar-venv/bin/pivovar-update $OPTIONS
 ExecReload=/bin/kill -HUP $MAINPID
 KillMode=process
 Restart=on-failure
