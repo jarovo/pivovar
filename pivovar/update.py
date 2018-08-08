@@ -46,8 +46,8 @@ def update():
 
 
 def checkout(repo, branch):
-    subprocess.check_call(["git", "fetch", "origin"])
-    subprocess.check_call(["git", "checkout", "origin/" + branch])
+    subprocess.check_call(["git", "fetch", repo, branch])
+    subprocess.check_call(["git", "checkout", 'FETCH_HEAD'])
 
 
 def install():
