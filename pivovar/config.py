@@ -41,4 +41,5 @@ MOTOR_VALVE_TRANSITIONING = 'al_motor_valve_transitioning'
 """ Seconds per single 'tick'. """
 
 
+REAL_TEMP_UPDATE_SECONDS = 15
 TICK = 1

@@ -4,7 +4,22 @@ from functools import wraps
 
 import pivovar.config as cfg
 
-phase_logger = logging.getLogger('phase')
+
+class listeners(set):
+    def notify_phase_started(self, phase):
+        for listener in self:
+            listener.phase_started(phase)
+
+    def notify_phase_finished(self, phase):
+        for listener in self:
+            listener.phase_finished(phase)
+
+
+def add_phases_listener(listener):
+    _phase_listeners.add(listener)
+
+
+_phase_listeners = listeners()
 phases = {}
 
 
@@ -12,9 +27,9 @@ def phase(name):
     def decorator(f):
         @wraps(f)
         def wrapper(*args, **kwds):
-            phase_logger.info('Staring phase: %s', name)
+            _phase_listeners.notify_phase_started(name)
             ret = f(*args, **kwds)
-            phase_logger.info('Phase finished: %s', name)
+            _phase_listeners.notify_phase_finished(name)
             return ret
         phases[name] = wrapper
         return wrapper
