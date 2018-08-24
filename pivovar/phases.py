@@ -8,7 +8,7 @@ import pivovar.config as cfg
 logger = logging.getLogger('phases')
 
 
-class listeners(set):
+class Listeners(set):
     def notify_phase_started(self, phase):
         logger.info('Staring phase: %s', phase)
         for listener in self:
@@ -24,7 +24,7 @@ def add_phases_listener(listener):
     _phase_listeners.add(listener)
 
 
-_phase_listeners = listeners()
+_phase_listeners = Listeners()
 phases = {}
 
 
