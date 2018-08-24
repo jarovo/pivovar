@@ -21,7 +21,7 @@ def test_wash_the_keg(time_mock):
 
 def test_washing_machine_add_temp():
     wm = wash.WashMachine()
-    for i in xrange(wm.MAX_TEMP_SAMPLES_COUNT+2):
+    for i in range(wm.MAX_TEMP_SAMPLES_COUNT+2):
         wm.add_temp(datetime.now() + timedelta(seconds=i), i)
     assert len(wm.real_temps) == wm.MAX_TEMP_SAMPLES_COUNT
 
@@ -40,7 +40,7 @@ def flask_client(flask_app):
 
 
 def test_real_temps(flask_client):
-    date = datetime(2018, 8, 24, 15, 03, 55)
+    date = datetime(2018, 8, 24, 15, 3, 55)
     wash.wash_machine.add_temp(date, 1)
     response = json.loads(flask_client.get('/real_temps').data)
     assert {'datetime': ["2018-08-24 15:03:55"], 'temps': ["1"]} == response

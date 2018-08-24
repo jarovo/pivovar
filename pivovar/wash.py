@@ -40,6 +40,7 @@ class UniPi(object):
 class UniPiModbus(UniPi):
     def __init__(self):
         from pymodbus.client.sync import ModbusTcpClient
+
         tun = SSHTunnel(cfg.TUNNEL_REMOTE_ADDR, 'pi', cfg.TUNNEL_LOCAL_PORT,
                         cfg.TUNNEL_REMOTE_BIND_PORT, cfg.MODBUS_ADDR)
         tun.connect()
