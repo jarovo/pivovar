@@ -154,11 +154,9 @@ class WashMachine(object):
         self.required_temp = cfg.REQ_TEMP
 
     def phase_started(self, name):
-        self.logger.info('Staring phase: %s', name)
         self.current_phase = name
 
     def phase_finished(self, name):
-        self.logger.info('Phase finished: %s', name)
         self.current_phase = 'idle'
 
     def add_temp(self, time, temp):

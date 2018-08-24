@@ -5,12 +5,17 @@ from functools import wraps
 import pivovar.config as cfg
 
 
+logger = logging.getLogger('phases')
+
+
 class listeners(set):
     def notify_phase_started(self, phase):
+        logger.info('Staring phase: %s', phase)
         for listener in self:
             listener.phase_started(phase)
 
     def notify_phase_finished(self, phase):
+        logger.info('Phase finished: %s', phase)
         for listener in self:
             listener.phase_finished(phase)
 
