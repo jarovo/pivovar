@@ -146,6 +146,8 @@ class UniPiJSONRPC(UniPi):
 
 
 class WashMachine(object):
+    MAX_TEMP_SAMPLES_COUNT = int(60*60*24 / cfg.REAL_TEMP_UPDATE_SECONDS)
+
     def __init__(self):
         self.current_phase = 'starting'
         self.phases = [str(phase) for phase in phases.phases]
@@ -161,8 +163,7 @@ class WashMachine(object):
 
     def add_temp(self, time, temp):
         self.real_temps.append((time, temp))
-        DAY = int(60*60*24/cfg.REAL_TEMP_UPDATE_SECONDS)
-        self.real_temps = self.real_temps[-DAY:]
+        self.real_temps = self.real_temps[-self.MAX_TEMP_SAMPLES_COUNT:]
         logger.info('Wash machine water temp now is %0.1f', temp)
 
 
@@ -181,7 +182,7 @@ def index():
 def real_temps():
     if request.method == 'GET':
         return jsonify({
-            'datetime': [item[0].strftime('%y-%m-%d %H:%M:%S')
+            'datetime': [item[0].strftime('%Y-%m-%d %H:%M:%S')
                          for item in wash_machine.real_temps],
             'temps': [str(item[1]) for item in wash_machine.real_temps]})
 
