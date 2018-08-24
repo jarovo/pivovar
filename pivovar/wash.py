@@ -206,8 +206,10 @@ def main():
 
     temps_update_thread = Thread(target=temps_update,
                                  args=(wash_machine, backend))
+    temps_update_thread.daemon = True
     temps_update_thread.start()
 
+    wash_thread.daemon = True
     wash_thread.start()
     app.run(debug=True)
 
