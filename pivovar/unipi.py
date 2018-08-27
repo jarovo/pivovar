@@ -1,9 +1,5 @@
 from abc import ABCMeta
-import atexit
 import logging
-import time
-import signal
-import subprocess
 
 from pivovar import config as cfg
 from pivovar.jsonrpc import Client, ProtocolError
@@ -24,60 +20,6 @@ class UniPi(object):
 
     def set_output(self, output, state):
         logger.debug("Setting output '%s' to '%s'", output, state)
-
-
-class UniPiModbus(UniPi):
-    def __init__(self):
-        from pymodbus.client.sync import ModbusTcpClient
-
-        tun = SSHTunnel(cfg.TUNNEL_REMOTE_ADDR, 'pi', cfg.TUNNEL_LOCAL_PORT,
-                        cfg.TUNNEL_REMOTE_BIND_PORT, cfg.MODBUS_ADDR)
-        tun.connect()
-        atexit.register(tun.disconnect)
-        signal.signal(signal.SIGINT, lambda x, y: tun.disconnect())
-
-        logger.info('Connecting to modbus. %s:%s',
-                    cfg.MODBUS_ADDR, cfg.MODBUS_PORT)
-        time.sleep(1)
-        self.modbus = ModbusTcpClient(cfg.MODBUS_ADDR, cfg.MODBUS_PORT)
-
-    def set_output(self, output, state):
-        UniPi.set_output(self, output, state)
-        self.write_coil(output, state)
-
-    def set_register(self, address, value):
-        logger.debug("Setting register %s to 0x%x", address, value)
-        self.modbus.write_register(address, value)
-
-
-class SSHTunnel(object):
-    def __init__(self, remote_address, user, local_port, remote_port,
-                 remote_bind_address):
-        self.remote_address = remote_address
-        self.user = user
-        self.local_port = local_port
-        self.remote_port = remote_port
-        self.remote_bind_address = remote_bind_address
-        self.tunproc = None
-
-    def connect(self):
-        if self.tunproc:
-            raise Exception('Already connected.')
-
-        logger.debug('Starting ssh port forwarding for modbus connection.')
-
-        args = ("ssh", "-N", "-L",
-                "{0.local_port}:{0.remote_bind_address}:{0.remote_port}"
-                .format(self),
-                "{0.user}@{0.remote_address}"
-                .format(self))
-        self.tunproc = subprocess.Popen(args, stdin=None)
-
-        logger.debug('Started ssh port forwarding for modbus connection.')
-
-    def disconnect(self):
-        self.tunproc.terminate()
-        logger.debug('Stopped ssh port forwarding for modbus connection.')
 
 
 class UniPiJSONRPC(UniPi):
