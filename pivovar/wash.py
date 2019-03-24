@@ -1,10 +1,14 @@
 from __future__ import print_function
 
+import argparse
 from datetime import datetime
 import logging
+import os
 import time
 from threading import Thread
-from flask import Flask, request, render_template, url_for, jsonify
+from flask import Flask
+from flask_restful import Resource, Api
+from flask_cors import CORS
 
 import pivovar.config as cfg
 from pivovar import phases
@@ -13,6 +17,8 @@ from pivovar.unipi import UniPiJSONRPC
 
 logger = logging.getLogger('keg_wash')
 app = Flask(__name__)
+api = Api(app)
+CORS(app)
 
 
 def log_time(arg):
@@ -44,49 +50,70 @@ class WashMachine(object):
 wash_machine = WashMachine()
 
 
-@app.route('/')
-def index():
-    return render_template(
-        'index.html',
-        real_temps_url=url_for('real_temps'),
-        washing_machine=wash_machine)
+class RealTemps(Resource):
+    def get(self):
+        return {
+            'datetime': [
+                item[0].strftime('%Y-%m-%d %H:%M:%S') for item in
+                wash_machine.real_temps
+            ],
+            'temps': [str(item[1]) for item in wash_machine.real_temps]}
 
 
-@app.route('/real_temps', methods=['GET'])
-def real_temps():
-    if request.method == 'GET':
-        return jsonify({
-            'datetime': [item[0].strftime('%Y-%m-%d %H:%M:%S')
-                         for item in wash_machine.real_temps],
-            'temps': [str(item[1]) for item in wash_machine.real_temps]})
+class Phases(Resource):
+    def get(self):
+        return wash_machine.phases
+
+
+class CurrentPhase(Resource):
+    def get(self):
+        return wash_machine.current_phase
+
+
+api.add_resource(Phases, '/phases')
+api.add_resource(RealTemps, '/real_temps')
+api.add_resource(CurrentPhase, '/current_phase')
 
 
 def temps_update(wash_machine, backend):
     while True:
-        wash_machine.add_temp(datetime.now(), backend.temp())
+        wash_machine.add_temp(datetime.now(), backend.temp(cfg.TEMP_SENSOR))
         time.sleep(cfg.REAL_TEMP_UPDATE_SECONDS)
 
 
-def main():
-    logging.basicConfig(level=logging.INFO)
-    import argparse
+def init():
     parser = argparse.ArgumentParser(description='Keg washing control.')
     parser.add_argument('--unipi_jsonrpc', type=str,
                         default='http://127.0.0.1/rpc',
                         help='Address to of unipi JSON RPC server.')
     args = parser.parse_args()
     backend = UniPiJSONRPC(args.unipi_jsonrpc)
-    wash_thread = Thread(target=phases.wash_the_kegs, args=(backend,))
+
+    wash_thread = Thread(name='washing machine',
+                         target=phases.wash_the_kegs,
+                         args=(backend,))
     phases.add_phases_listener(wash_machine)
 
-    temps_update_thread = Thread(target=temps_update,
+    temps_update_thread = Thread(name='temps updater',
+                                 target=temps_update,
                                  args=(wash_machine, backend))
+
     temps_update_thread.daemon = True
     temps_update_thread.start()
 
     wash_thread.daemon = True
     wash_thread.start()
-    app.run(debug=True)
+
+
+def main():
+    logging.basicConfig(level=logging.DEBUG)
+    use_debug = True
+    if use_debug and not os.environ.get('WERKZEUG_RUN_MAIN'):
+        logger.debug('Startup: pid %d is the werkzeug reloader' % os.getpid())
+    else:
+        logger.debug('Startup: pid %d is the active werkzeug' % os.getpid())
+        init()
+    app.run(port=5001, debug=use_debug)
 
 
 if __name__ == '__main__':

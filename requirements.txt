@@ -2,3 +2,4 @@ requests
 six
 PyYaml
 flask
+flask-cors

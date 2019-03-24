@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+      <div class="col-sm-3">
+        <h3>Keg washing machine.</h3>
+        <div class="list-group" id="phases"></div>
+      </div>
+      <div class="col-sm-9">
+        <h3>Washing machine water temps</h3>
+        <div id="temp_plot" />
+      </div>
+    </div>
+{% endblock %}
+{% block script %}
+    $.getJSON('{{ real_temps_url }}', function (data) {
+        var real_temps = {
+            mode: 'lines+markers',
+            name: 'skutečná teplota',
+            line: {'shape': 'spline'},
+            type: 'scatter'
+        }
+            real_temps.x = data['datetime']
+            real_temps.y = data['temps']
+
+        var data = [real_temps];
+
+        var layout = {legend: {
+            y: 0.5,
+            traceorder: 'reversed',
+            font: {size: 16},
+            yref: 'paper'
+        }};
+
+        Plotly.newPlot('temp_plot', data, layout);
+    })
+
+    function create_phase(phases, content, active) {
+        var li = document.createElement("a")
+        li.classList.add('list-group-item')
+        if (active) {
+            li.classList.add('active')
+        }
+        var t = document.createTextNode(content);
+        li.appendChild(t)
+        phases.appendChild(li)
+    }
+
+    $.getJSON('{{ wash_machine_current_phase_url }}', function (data) {
+        current_phase = data
+        $.getJSON('{{ wash_machine_phases_url }}', function (data) {
+            phases = document.getElementById("phases");
+            data.forEach(function(phase){ create_phase(phases, phase, phase == current_phase) })
+        });
+    });
+{% endblock %}

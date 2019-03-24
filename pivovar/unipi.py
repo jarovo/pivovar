@@ -26,7 +26,6 @@ class UniPiJSONRPC(UniPi):
     def __init__(self, address):
         UniPi.__init__(self)
         self.server = Client(address)
-        self.check()
 
     def set_output(self, output, state):
         UniPi.set_output(self, output, state)
@@ -44,8 +43,8 @@ class UniPiJSONRPC(UniPi):
     def get_input(self, input):
         return self.server.input_get(input)[0]
 
-    def temp(self):
-        return self.server.sensor_get(cfg.TEMP_SENSOR)[0]
+    def temp(self, temp_sensor):
+        return self.server.sensor_get(temp_sensor)[0]
 
     def check(self):
         failed = False
@@ -69,8 +68,8 @@ class UniPiJSONRPC(UniPi):
         try:
             self.server.sensor_get(cfg.TEMP_SENSOR)
         except ProtocolError:
-                logger.error('Sensor "%s" not found!', cfg.TEMP_SENSOR)
-                failed = True
+            logger.error('Sensor "%s" not found!', cfg.TEMP_SENSOR)
+            failed = True
 
         if failed:
             raise Exception('Failed to find some inputs or outputs! '

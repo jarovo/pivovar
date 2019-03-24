@@ -59,7 +59,7 @@ def reset(backend):
 
 
 def temp_ready(backend):
-    return backend.temp() >= cfg.REQ_TEMP
+    return backend.temp(cfg.TEMP_SENSOR) >= cfg.REQ_TEMP
 
 
 def system_flush(backend, ticks):
@@ -98,12 +98,12 @@ def heating(backend):
         logging.info(
             'Waiting for water (actual temperature %.2f) to get to required '
             'temperature: %.2f.',
-            backend.temp(),
+            backend.temp(cfg.TEMP_SENSOR),
             cfg.REQ_TEMP)
         time.sleep(cfg.HEATING_SLEEP_SECONDS)
     logging.info(
         'Water ready (actual temperature %.2f. Required %.2f)',
-        backend.temp(), cfg.REQ_TEMP)
+        backend.temp(cfg.TEMP_SENSOR), cfg.REQ_TEMP)
 
 
 @phase('prewashing')
@@ -183,6 +183,7 @@ def wash_the_keg(backend):
 
 
 def wash_the_kegs(backend):
+    backend.check()
     while True:
         wait_for_keg(backend)
         heating(backend),
