@@ -3,3 +3,4 @@ six
 PyYaml
 flask
 flask-cors
+flask-restful
