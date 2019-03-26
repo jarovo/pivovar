@@ -1,4 +1,4 @@
 pytest
 mock
-flake8
 Flask-Testing
+pytest-cov
