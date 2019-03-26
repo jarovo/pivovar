@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from pivovar import wash
 from pivovar import phases
 from pivovar import config as cfg
+from pivovar import unipi
 import pytest
 
 try:
@@ -11,12 +12,38 @@ except ImportError:
     from mock import MagicMock, patch
 
 
-@patch("pivovar.phases.time")
-def test_wash_the_keg(time_mock):
+@pytest.fixture
+def phases_patched():
+    phases.delay = MagicMock()
+    yield phases
+
+
+@pytest.fixture
+def backend():
     backend = MagicMock()
     backend.temp.return_value = cfg.REQ_TEMP
-    phases.delay = MagicMock()
-    phases.wash_the_keg(backend)
+    backend.ALL_RLYS = unipi.UniPi.ALL_RLYS
+    yield backend
+
+
+@patch("pivovar.phases.time")
+def test_wash_the_keg(time_mock, backend, phases_patched):
+    phases_patched.wash_the_keg(backend)
+
+
+@patch("pivovar.phases.time")
+def test_wait_for_keg(time_mock, backend, phases_patched):
+    phases_patched.wait_for_keg(backend)
+
+
+@patch("pivovar.phases.time")
+def test_heating(time_mock, backend, phases_patched):
+    phases_patched.heating(backend)
+
+
+@patch("pivovar.phases.time")
+def test_reset(time_mock, backend, phases_patched):
+    phases_patched.reset(backend)
 
 
 def test_washing_machine_add_temp():
