@@ -5,11 +5,7 @@ from pivovar import phases
 from pivovar import config as cfg
 from pivovar import unipi
 import pytest
-
-try:
-    from unittest.mock import MagicMock, patch
-except ImportError:
-    from mock import MagicMock, patch
+from .themock import MagicMock, patch
 
 
 @pytest.fixture
