@@ -27,13 +27,10 @@ def backend():
 
 
 @patch("pivovar.phases.time")
-def test_wash_the_keg(time_mock, backend, phases_patched):
-    phases_patched.wash_the_keg(backend)
-
-
-@patch("pivovar.phases.time")
-def test_wait_for_keg(time_mock, backend, phases_patched):
-    phases_patched.wait_for_keg(backend)
+@patch('pivovar.unipi.Client')
+def test_wash_the_keg(time_mock, rpc_client_mock):
+    backend = unipi.UniPiJSONRPC('someaddress')
+    phases.wash_the_keg(backend)
 
 
 @patch("pivovar.phases.time")
