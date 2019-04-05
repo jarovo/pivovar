@@ -21,6 +21,14 @@ api = Api(app)
 CORS(app)
 
 
+class DefaultConfig(object):
+    PORT = 5001
+    INSTANCE_CONFIG_FILE = 'wash.cfg'
+
+
+cfg.configure_app(app)
+
+
 def log_time(arg):
     logger.debug("From print_time", arg, time.time())
 
@@ -116,7 +124,7 @@ def main():
     else:
         logger.debug('Startup: pid %d is the active werkzeug' % os.getpid())
         init()
-    app.run(port=5001, debug=use_debug)
+    app.run(port=app.config['PORT'], debug=use_debug)
 
 
 if __name__ == '__main__':

@@ -43,3 +43,12 @@ MOTOR_VALVE_TRANSITIONING = 'al_motor_valve_transitioning'
 
 REAL_TEMP_UPDATE_SECONDS = 15
 TICK = 1
+
+
+def configure_app(app):
+    import os
+    config_name = os.getenv('FLASK_CONFIGURATION', 'DefaultConfig')
+    # object-based default configuratiok
+    app.config.from_object('{}.{}'.format(app.name, config_name))
+    # instance-folders configuration
+    app.config.from_pyfile(app.config['INSTANCE_CONFIG_FILE'], silent=True)
