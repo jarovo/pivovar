@@ -30,7 +30,6 @@ class WashMachine(object):
 
     def __init__(self):
         self.current_phase = 'starting'
-        self.phases = [str(phase) for phase in phases.phases]
         self.logger = logging.getLogger('keg_wash')
         self.real_temps = []
         self.required_temp = cfg.REQ_TEMP
@@ -45,6 +44,10 @@ class WashMachine(object):
         self.real_temps.append((time, temp))
         self.real_temps = self.real_temps[-self.MAX_TEMP_SAMPLES_COUNT:]
         logger.info('Wash machine water temp now is %0.1f', temp)
+
+    @property
+    def phases(self):
+        return [p for p in phases.phases.keys()]
 
 
 wash_machine = WashMachine()
