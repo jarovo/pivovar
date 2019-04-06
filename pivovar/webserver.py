@@ -23,7 +23,7 @@ def wash():
     wash_url = app.config['WASH_URL']
     return render_template(
         'wash.html',
-        real_temps_url=urljoin(wash_url, '/real_temps'),
+        temp_log_url=urljoin(wash_url, '/temp_log'),
         wash_machine_url=urljoin(wash_url, '/wash_machine')
     )
 

@@ -29,6 +29,8 @@ class DefaultConfig(object):
 cfg.configure_app(app)
 api = Api(app)
 
+ERROR_SLEEP_TIME = 1
+
 
 def log_time(arg):
     logger.debug("From print_time", arg, time.time())
@@ -40,7 +42,7 @@ class WashMachine(object):
     def __init__(self):
         self.current_phase = 'starting'
         self.logger = logging.getLogger('keg_wash')
-        self.real_temps = []
+        self.temp_log = []
         self.required_temp = cfg.REQ_TEMP
 
     def phase_started(self, name):
@@ -50,9 +52,11 @@ class WashMachine(object):
         self.current_phase = 'idle'
 
     def add_temp(self, time, temp):
-        self.real_temps.append((time, temp))
-        self.real_temps = self.real_temps[-self.MAX_TEMP_SAMPLES_COUNT:]
-        logger.info('Wash machine water temp now is %0.1f', temp)
+        self.temp_log.append((time, temp))
+        self.temp_log = self.temp_log[-self.MAX_TEMP_SAMPLES_COUNT:]
+        logger.info(
+            'Added wash machine water temperature %0.1f into the temp_log',
+            temp)
 
     @property
     def phases(self):
@@ -69,15 +73,15 @@ washing_machine_model = api.model('Washing machine', {
 })
 
 
-@api.route('/real_temps')
+@api.route('/temp_log')
 class RealTemps(Resource):
     def get(self):
         return {
             'datetime': [
                 item[0].strftime('%Y-%m-%d %H:%M:%S') for item in
-                wash_machine.real_temps
+                wash_machine.temp_log
             ],
-            'temps': [str(item[1]) for item in wash_machine.real_temps]}
+            'temps': [str(item[1]) for item in wash_machine.temp_log]}
 
 
 @api.route('/wash_machine')
@@ -89,8 +93,13 @@ class WashMachineResource(Resource):
 
 def temps_update(wash_machine, backend):
     while True:
-        wash_machine.add_temp(datetime.now(), backend.temp(cfg.TEMP_SENSOR))
-        time.sleep(cfg.REAL_TEMP_UPDATE_SECONDS)
+        try:
+            sensor = backend.checked_sensor(cfg.TEMP_SENSOR)
+            wash_machine.add_temp(datetime.now(), sensor.value)
+            time.sleep(cfg.REAL_TEMP_UPDATE_SECONDS)
+        except Exception as exc:
+            logger.exception('Error happened in the temps update: %s', exc)
+            time.sleep(ERROR_SLEEP_TIME)
 
 
 def init():
@@ -119,6 +128,7 @@ def init():
 
 def main():
     logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger('werkzeug').setLevel(logging.WARNING)
     use_debug = True
     if use_debug and not os.environ.get('WERKZEUG_RUN_MAIN'):
         logger.debug('Startup: pid %d is the werkzeug reloader' % os.getpid())

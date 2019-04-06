@@ -4,8 +4,8 @@ import argparse
 
 ALIASES = {
     ('input', '1_01'): 'al_fuse_ok',
-    ('input', '1_02'): 'al_keg_present',
-    ('input', '1_03'): '',
+    ('input', '1_02'): 'al_total_stop',
+    ('input', '1_03'): 'al_keg_present',
     ('input', '1_04'): '',
     ('input', '2_01'): '',
     ('input', '2_02'): '',
@@ -15,9 +15,9 @@ ALIASES = {
     ('input', '2_06'): '',
     ('input', '2_07'): '',
     ('input', '2_08'): '',
-    ('output', '1_01'): '',
-    ('output', '1_02'): '',
-    ('output', '1_03'): '',
+    ('output', '1_01'): 'al_error_lamp',
+    ('output', '1_02'): 'al_ready_lamp',
+    ('output', '1_03'): 'al_waiting_for_input_lamp',
     ('output', '1_04'): '',
     ('ao', '1_01'): '',
     ('ai', '1_01'): '',

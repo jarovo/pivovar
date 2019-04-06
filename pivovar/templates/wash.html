@@ -11,18 +11,18 @@
     </div>
 {% endblock %}
 {% block script %}
-    function update_real_temps() {
-        $.getJSON('{{ real_temps_url }}', function (data) {
-            var real_temps = {
+    function update_temp_log() {
+        $.getJSON('{{ temp_log_url }}', function (data) {
+            var temp_log = {
                 mode: 'lines+markers',
                 name: 'skutečná teplota',
                 line: {'shape': 'spline'},
                 type: 'scatter'
             }
-                real_temps.x = data['datetime']
-                real_temps.y = data['temps']
+                temp_log.x = data['datetime']
+                temp_log.y = data['temps']
 
-            var data = [real_temps];
+            var data = [temp_log];
 
             var layout = {legend: {
                 y: 0.5,
@@ -63,6 +63,6 @@
         });
     }
 
-    window.setInterval(update_real_temps, 2000)
+    window.setInterval(update_temp_log, 2000)
     window.setInterval(update_phases, 200)
 {% endblock %}

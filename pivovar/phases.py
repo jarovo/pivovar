@@ -3,9 +3,11 @@ import time
 from functools import wraps
 
 import pivovar.config as cfg
+from pivovar.jsonrpc import ProtocolError
 
 
 logger = logging.getLogger('phases')
+ERROR_SLEEP_TIME = .3
 
 
 class Listeners(set):
@@ -50,16 +52,8 @@ def turn_motor_valve(backend, relay, state):
     time.sleep(cfg.MOTOR_VALVE_TRANSITION_SECONDS)
 
 
-@phase("reset")
-def reset(backend):
-    for rly in backend.ALL_RLYS:
-        if backend.get_output(rly):
-            backend.set_output(rly, False)
-    time.sleep(cfg.MOTOR_VALVE_TRANSITION_SECONDS)
-
-
-def temp_ready(backend):
-    return backend.temp(cfg.TEMP_SENSOR) >= cfg.REQ_TEMP
+def temp_ok(temp):
+    return float(temp) >= cfg.REQ_TEMP
 
 
 def system_flush(backend, ticks):
@@ -85,25 +79,77 @@ def pulse(backend, rly, count, duration, duty_cycle=0.5):
         delay(t_off)
 
 
+@phase("reset")
+def reset(backend):
+    backend.set_output(cfg.WAITING_FOR_INPUT_LAMP, False)
+    for rly in backend.ALL_RLYS:
+        if backend.get_output(rly):
+            backend.set_output(rly, False)
+    time.sleep(cfg.MOTOR_VALVE_TRANSITION_SECONDS)
+
+
+@phase('check')
+def check(backend):
+    failed = []
+    for output in backend.ALL_OUTPUTS:
+        logger.info('Checking whether output named "%s" exists.', output)
+        try:
+            backend.get_output(output)
+        except ProtocolError:
+            logger.error('Output "%s" not configured in UniPi!', output)
+            failed.append('output ' + output)
+
+    for rly in backend.ALL_RLYS:
+        logger.info('Checking whether relay named "%s" exists.', rly)
+        try:
+            backend.get_output(rly)
+        except ProtocolError:
+            logger.error('Relay "%s" not configured in UniPi!', rly)
+            failed.append('relay ' + rly)
+
+    for inp in (cfg.KEG_PRESENT,):
+        logger.info('Checking input named "%s" exists.', inp)
+        try:
+            backend.get_input(inp)
+        except ProtocolError:
+            logger.error('Input "%s" not configured in UniPi!', inp)
+            failed.append('input ' + rly)
+
+    logger.info('Checking sensor named "%s" exists.', cfg.TEMP_SENSOR)
+    try:
+        backend.checked_sensor(cfg.TEMP_SENSOR)
+    except ProtocolError:
+        logger.error('Sensor "%s" not found!', cfg.TEMP_SENSOR)
+        failed.append('temp_sensor ' + rly)
+
+    if failed:
+        raise Exception('Failed to find some inputs or outputs! (%s)'
+                        .format(', '.join(failed)))
+
+
 @phase('waiting for keg')
 def wait_for_keg(backend):
     logging.info('Waiting for keg.')
+    backend.set_output(cfg.WAITING_FOR_INPUT_LAMP, True)
     while not backend.get_input(cfg.KEG_PRESENT):
         time.sleep(.01)
 
 
 @phase('heating')
 def heating(backend):
-    while not temp_ready(backend):
+    actual_temp = backend.temp(cfg.TEMP_SENSOR)
+    backend.set_output(cfg.WAITING_FOR_INPUT_LAMP, True)
+    while not temp_ok(actual_temp):
         logging.info(
             'Waiting for water (actual temperature %.2f) to get to required '
             'temperature: %.2f.',
-            backend.temp(cfg.TEMP_SENSOR),
+            actual_temp,
             cfg.REQ_TEMP)
         time.sleep(cfg.HEATING_SLEEP_SECONDS)
+        actual_temp = backend.temp(cfg.TEMP_SENSOR)
     logging.info(
         'Water ready (actual temperature %.2f. Required %.2f)',
-        backend.temp(cfg.TEMP_SENSOR), cfg.REQ_TEMP)
+        actual_temp, cfg.REQ_TEMP)
 
 
 @phase('prewashing')
@@ -167,27 +213,29 @@ def fill_with_co2(backend):
     backend.set_output(cfg.CO2_RLY, cfg.OFF)
 
 
-def wash_the_keg(backend):
-    wash_cycle = (
-        prewash,
-        drain,
-        wash_with_lye,
-        rinse_with_cold_water,
-        wash_with_hot_water,
-        dry,
-        fill_with_co2
-    )
-    for phase in wash_cycle:
-        reset(backend)
-        phase(backend)
-
-
 def wash_the_kegs(backend):
-    backend.check()
     while True:
-        wait_for_keg(backend)
-        heating(backend),
-        logging.info('Keg present and hot water is ready. '
-                     'The washing process can start now.')
-        wash_the_keg(backend)
-        reset(backend)
+        wash_cycle = (
+            check,
+            wait_for_keg,
+            heating,
+            prewash,
+            drain,
+            wash_with_lye,
+            rinse_with_cold_water,
+            wash_with_hot_water,
+            dry,
+            fill_with_co2
+        )
+        for phase in wash_cycle:
+            while True:
+                try:
+                    backend.signal_error(False)
+                    reset(backend)
+                    phase(backend)
+                    break
+                except Exception as exc:
+                    logger.exception('Exception happened in phase %s: %s',
+                                     phase, exc)
+                    backend.signal_error(True)
+                    time.sleep(ERROR_SLEEP_TIME)

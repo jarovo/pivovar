@@ -2,8 +2,13 @@ import requests
 import json
 
 import logging
+
+
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+# The methods are defined here:
+# https://github.com/UniPiTechnology/evok/blob/master/evok/rpc_handler.py
 
 
 class ProtocolError(Exception):

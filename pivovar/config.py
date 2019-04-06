@@ -1,8 +1,10 @@
+# Washing machine temperature related config
 REQ_TEMP = 24.0
 """ Temperature of hot water to wait for. """
 TEMP_SENSOR = '287DD88304000063'
 HEATING_SLEEP_SECONDS = 3
 
+# Relays
 AIR_RLY = 'al_air'
 PUMP_RLY = 'al_pump'
 LYE_OR_WATER_RLY = 'al_lye_or_water'
@@ -11,10 +13,16 @@ COLD_WATER_RLY = 'al_cold_water'
 DRAIN_OR_RECIRCULATION_RLY = 'al_drain_or_recirculation'
 DRAIN_RLY = 'al_drain'
 
-ALL_RLYS = (AIR_RLY, PUMP_RLY, LYE_OR_WATER_RLY, CO2_RLY, COLD_WATER_RLY,
-            DRAIN_OR_RECIRCULATION_RLY, DRAIN_RLY)
+# Digital outputs
+ERROR_LAMP = 'al_error_lamp'
+READY_LAMP = 'al_ready_lamp'
+WAITING_FOR_INPUT_LAMP = 'al_waiting_for_input_lamp'
 
+# Digital inputs
+FUSE_OK = 'al_fuse_ok'
+TOTAL_STOP = 'al_total_stop'
 KEG_PRESENT = 'al_keg_present'
+
 
 # Define relay constants.
 ON = LYE = RECIRCULATION = True

@@ -1,11 +1,14 @@
 from abc import ABCMeta
 import logging
+from collections import namedtuple
 
 from pivovar import config as cfg
-from pivovar.jsonrpc import Client, ProtocolError
-
+from pivovar.jsonrpc import Client
 
 logger = logging.getLogger('unipi')
+
+
+OneWireSensor = namedtuple('OneWireSensor', 'value lost time interval')
 
 
 class UniPi(object):
@@ -14,6 +17,8 @@ class UniPi(object):
     ALL_RLYS = (cfg.AIR_RLY, cfg.PUMP_RLY, cfg.LYE_OR_WATER_RLY, cfg.CO2_RLY,
                 cfg.COLD_WATER_RLY, cfg.DRAIN_OR_RECIRCULATION_RLY,
                 cfg.DRAIN_RLY)
+
+    ALL_OUTPUTS = (cfg.ERROR_LAMP, cfg.READY_LAMP, cfg.WAITING_FOR_INPUT_LAMP)
 
     def __init__(self):
         pass
@@ -43,34 +48,30 @@ class UniPiJSONRPC(UniPi):
     def get_input(self, input):
         return self.server.input_get(input)[0]
 
-    def temp(self, temp_sensor):
-        return self.server.sensor_get(temp_sensor)[0]
+    def sensor(self, sensor_name):
+        return OneWireSensor(*self.server.sensor_get(sensor_name))
 
-    def check(self):
-        failed = False
-        for rly in cfg.ALL_RLYS:
-            logger.info('Checking whether output named "%s" exists.', rly)
-            try:
-                self.get_output(rly)
-            except ProtocolError:
-                logger.error('Output "%s" not configured in UniPi!', rly)
-                failed = True
+    def checked_sensor(self, sensor_name):
+        sensor = self.sensor(sensor_name)
+        if sensor.lost:
+            raise LostSensor('Sensor {} has been lost.'.format(sensor_name),
+                             sensor)
+        return sensor
 
-        for inp in (cfg.KEG_PRESENT,):
-            logger.info('Checking input named "%s" exists.', inp)
-            try:
-                self.get_input(inp)
-            except ProtocolError:
-                logger.error('Input "%s" not configured in UniPi!', inp)
-                failed = True
+    def temp(self, sensor_name):
+        return self.checked_sensor(sensor_name).value
 
-        logger.info('Checking sensor named "%s" exists.', cfg.TEMP_SENSOR)
+    def signal_error(self, error=True):
         try:
-            self.server.sensor_get(cfg.TEMP_SENSOR)
-        except ProtocolError:
-            logger.error('Sensor "%s" not found!', cfg.TEMP_SENSOR)
-            failed = True
+            self.set_output(cfg.ERROR_LAMP, bool(error))
+        except Exception as exc:
+            logger.exception("Couldn't switch the error lamp %s: %s",
+                             ("on" if error else "off"), exc)
 
-        if failed:
-            raise Exception('Failed to find some inputs or outputs! '
-                            'Check the logs for more details.')
+
+class UniPiError(Exception):
+    pass
+
+
+class LostSensor(UniPiError):
+    pass
