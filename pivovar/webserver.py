@@ -4,6 +4,7 @@ from urllib.parse import urljoin
 
 
 class DefaultConfig(object):
+    PORT = 5000
     WASH_URL = 'http://localhost:5001/'
     INSTANCE_CONFIG_FILE = 'webserver.cfg'
 
@@ -29,7 +30,7 @@ def wash():
 
 
 def main():
-    app.run(debug=True)
+    app.run(port=app.config['PORT'], debug=True)
 
 
 if __name__ == '__main__':
