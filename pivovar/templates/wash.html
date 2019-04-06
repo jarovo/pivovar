@@ -11,27 +11,29 @@
     </div>
 {% endblock %}
 {% block script %}
-    $.getJSON('{{ real_temps_url }}', function (data) {
-        var real_temps = {
-            mode: 'lines+markers',
-            name: 'skutečná teplota',
-            line: {'shape': 'spline'},
-            type: 'scatter'
-        }
-            real_temps.x = data['datetime']
-            real_temps.y = data['temps']
+    function update_real_temps() {
+        $.getJSON('{{ real_temps_url }}', function (data) {
+            var real_temps = {
+                mode: 'lines+markers',
+                name: 'skutečná teplota',
+                line: {'shape': 'spline'},
+                type: 'scatter'
+            }
+                real_temps.x = data['datetime']
+                real_temps.y = data['temps']
 
-        var data = [real_temps];
+            var data = [real_temps];
 
-        var layout = {legend: {
-            y: 0.5,
-            traceorder: 'reversed',
-            font: {size: 16},
-            yref: 'paper'
-        }};
+            var layout = {legend: {
+                y: 0.5,
+                traceorder: 'reversed',
+                font: {size: 16},
+                yref: 'paper'
+            }};
 
-        Plotly.newPlot('temp_plot', data, layout);
-    })
+            Plotly.react('temp_plot', data, layout);
+        })
+    }
 
     function create_phase(phases, content, active) {
         var li = document.createElement("a")
@@ -44,12 +46,23 @@
         phases.appendChild(li)
     }
 
-    $.getJSON('{{ wash_machine_url }}', function (data) {
-        wash_machine = data
+    function update_phases() {
+        $.getJSON('{{ wash_machine_url }}', function (data) {
+            wash_machine = data
 
-        phases = document.getElementById("phases");
+            phases = document.getElementById("phases");
+
+            while (phases.hasChildNodes()) {
+                phases.removeChild(phases.lastChild);
+            }
+
             wash_machine.phases.forEach(function(phase){
                 create_phase(phases, phase,
-                             phase == wash_machine.current_phase) })
-    });
+                             phase == wash_machine.current_phase)
+            })
+        });
+    }
+
+    window.setInterval(update_real_temps, 2000)
+    window.setInterval(update_phases, 200)
 {% endblock %}
