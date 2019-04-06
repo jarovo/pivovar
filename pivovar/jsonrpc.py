@@ -45,5 +45,20 @@ class Client(object):
     def sensor_get(self, sensor):
         return self._jsonrpc_args_method("sensor_get", sensor)
 
+    def sensor_get_value(self, sensor):
+        return self._jsonrpc_args_method("sensor_get_value", sensor)
+
+    def owbus_get(self, circuit):
+        return self._jsonrpc_args_method('owbus_get', circuit)
+
+    def owbus_set(self, circuit, scan_interval):
+        return self._jsonrpc_args_method('owbus_set', circuit, scan_interval)
+
+    def owbus_list(self, circuit):
+        return self._jsonrpc_args_method("owbus_list", circuit)
+
+    def owbus_scan(self, circuit):
+        return self._jsonrpc_args_method("owbus_scan", circuit)
+
     def input_get(self, input):
         return self._jsonrpc_args_method("input_get", input)
