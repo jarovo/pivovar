@@ -24,8 +24,7 @@ def wash():
     return render_template(
         'wash.html',
         real_temps_url=urljoin(wash_url, '/real_temps'),
-        wash_machine_phases_url=urljoin(wash_url, '/phases'),
-        wash_machine_current_phase_url=urljoin(wash_url, '/current_phase')
+        wash_machine_url=urljoin(wash_url, '/wash_machine')
     )
 
 

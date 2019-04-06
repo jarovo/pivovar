@@ -7,7 +7,8 @@ import os
 import time
 from threading import Thread
 from flask import Flask
-from flask_restful import Resource, Api
+from flask_restplus import Resource, fields
+from flask_restplus import Api
 from flask_cors import CORS
 
 import pivovar.config as cfg
@@ -17,7 +18,6 @@ from pivovar.unipi import UniPiJSONRPC
 
 logger = logging.getLogger('keg_wash')
 app = Flask(__name__)
-api = Api(app)
 CORS(app)
 
 
@@ -27,6 +27,7 @@ class DefaultConfig(object):
 
 
 cfg.configure_app(app)
+api = Api(app)
 
 
 def log_time(arg):
@@ -61,6 +62,14 @@ class WashMachine(object):
 wash_machine = WashMachine()
 
 
+washing_machine_model = api.model('Washing machine', {
+    'current_phase': fields.String,
+    'phases': fields.List(fields.String),
+    'required_temp': fields.Float,
+})
+
+
+@api.route('/real_temps')
 class RealTemps(Resource):
     def get(self):
         return {
@@ -71,19 +80,11 @@ class RealTemps(Resource):
             'temps': [str(item[1]) for item in wash_machine.real_temps]}
 
 
-class Phases(Resource):
-    def get(self):
-        return wash_machine.phases
-
-
-class CurrentPhase(Resource):
-    def get(self):
-        return wash_machine.current_phase
-
-
-api.add_resource(Phases, '/phases')
-api.add_resource(RealTemps, '/real_temps')
-api.add_resource(CurrentPhase, '/current_phase')
+@api.route('/wash_machine')
+class WashMachineResource(Resource):
+    @api.marshal_with(washing_machine_model)
+    def get(self, **kwargs):
+        return wash_machine
 
 
 def temps_update(wash_machine, backend):

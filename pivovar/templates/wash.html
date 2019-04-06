@@ -44,11 +44,12 @@
         phases.appendChild(li)
     }
 
-    $.getJSON('{{ wash_machine_current_phase_url }}', function (data) {
-        current_phase = data
-        $.getJSON('{{ wash_machine_phases_url }}', function (data) {
-            phases = document.getElementById("phases");
-            data.forEach(function(phase){ create_phase(phases, phase, phase == current_phase) })
-        });
+    $.getJSON('{{ wash_machine_url }}', function (data) {
+        wash_machine = data
+
+        phases = document.getElementById("phases");
+            wash_machine.phases.forEach(function(phase){
+                create_phase(phases, phase,
+                             phase == wash_machine.current_phase) })
     });
 {% endblock %}
