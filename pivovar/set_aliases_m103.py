@@ -3,11 +3,11 @@ import requests
 import argparse
 
 ALIASES = {
-    ('input', '1_01'): '',
-    ('input', '1_02'): '',
+    ('input', '1_01'): 'al_fuse_ok',
+    ('input', '1_02'): 'al_keg_present',
     ('input', '1_03'): '',
     ('input', '1_04'): '',
-    ('input', '2_01'): 'al_keg_present',
+    ('input', '2_01'): '',
     ('input', '2_02'): '',
     ('input', '2_03'): '',
     ('input', '2_04'): '',
