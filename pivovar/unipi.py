@@ -46,7 +46,7 @@ class UniPiJSONRPC(UniPi):
             return ret
 
     def get_input(self, input):
-        return self.server.input_get(input)[0]
+        return self.server.input_get_value(input)
 
     def sensor(self, sensor_name):
         return OneWireSensor(*self.server.sensor_get(sensor_name))

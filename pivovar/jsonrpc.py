@@ -66,3 +66,6 @@ class Client(object):
 
     def input_get(self, input):
         return self._jsonrpc_args_method("input_get", input)
+
+    def input_get_value(self, input):
+        return self._jsonrpc_args_method("input_get_value", input)
