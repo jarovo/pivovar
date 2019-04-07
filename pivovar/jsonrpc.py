@@ -9,6 +9,10 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 # The methods are defined here:
 # https://github.com/UniPiTechnology/evok/blob/master/evok/rpc_handler.py
+# Return value signatures can be inhered from
+# https://github.com/UniPiTechnology/evok/blob/master/evok/neuron.py
+# or
+# https://github.com/UniPiTechnology/evok/blob/master/evok/owclient.py
 
 
 class ProtocolError(Exception):
