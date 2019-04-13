@@ -27,8 +27,6 @@ class DefaultConfig(object):
 cfg.configure_app(app)
 api = Api(app)
 
-ERROR_SLEEP_TIME = 1
-
 
 wash_machine = wash_machine.WashMachine()
 

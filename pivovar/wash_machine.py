@@ -35,6 +35,10 @@ class WashMachine(object):
         self.required_temp = cfg.REQ_TEMP
         self.backend = None
 
+    @staticmethod
+    def keep_running():
+        return True
+
     @property
     def phases(self):
         return [v.phase_name for v in vars(type(self)).values()
@@ -62,6 +66,9 @@ class WashMachine(object):
             except Exception as exc:
                 logger.exception('Error happened in the temps update: %s', exc)
                 time.sleep(ERROR_SLEEP_TIME)
+
+    def is_keg_present(self):
+        return self.backend.get_input(cfg.KEG_PRESENT)
 
     def is_total_stop_pressed(self):
         return self.backend.get_input(cfg.TOTAL_STOP)
@@ -102,7 +109,7 @@ class WashMachine(object):
         time.sleep(cfg.MOTOR_VALVE_TRANSITION_SECONDS)
 
     @staticmethod
-    def temp_ok(temp):
+    def is_temp_ok(temp):
         return float(temp) >= cfg.REQ_TEMP
 
     def system_flush(self, ticks):
@@ -181,7 +188,7 @@ class WashMachine(object):
         backend = self.backend
         logging.info('Waiting for keg.')
         backend.set_output(cfg.WAITING_FOR_INPUT_LAMP, True)
-        while not backend.get_input(cfg.KEG_PRESENT):
+        while not self.is_keg_present():
             time.sleep(.01)
             self.wait_until_inputs_ok()
 
@@ -190,7 +197,7 @@ class WashMachine(object):
         backend = self.backend
         actual_temp = backend.temp(cfg.TEMP_SENSOR)
         backend.set_output(cfg.WAITING_FOR_INPUT_LAMP, True)
-        while not self.temp_ok(actual_temp):
+        while not self.is_temp_ok(actual_temp):
             logging.info(
                 'Waiting for water (actual temperature %.2f) '
                 'to get to required temperature: %.2f.',
@@ -265,7 +272,7 @@ class WashMachine(object):
 
     def wash_the_kegs(self):
         backend = self.backend
-        while True:
+        while self.keep_running():
             wash_cycle = (
                 self.check,
                 self.wait_for_keg,
@@ -290,11 +297,3 @@ class WashMachine(object):
                                          phase, exc)
                         backend.signal_error(True)
                         time.sleep(ERROR_SLEEP_TIME)
-
-    def add_error(self, error):
-        self.errors.add(error)
-        self.backend._signal_error(bool(self.errors))
-
-    def clear_error(self, error):
-        self.errors.discard(error)
-        self.backend._signal_error(bool(self.errors))

@@ -17,7 +17,7 @@ def backend():
 
 
 @pytest.fixture
-def mocked_backend_washing_machine(backend):
+def mocked_backend_wm(backend):
     wm = wash_machine.WashMachine()
     wm.backend = backend
     yield wm
@@ -25,30 +25,36 @@ def mocked_backend_washing_machine(backend):
 
 @patch("pivovar.wash_machine.WashMachine.is_fuse_blown")
 @patch("pivovar.wash_machine.WashMachine.is_total_stop_pressed")
+@patch("pivovar.wash_machine.WashMachine.is_keg_present",
+       side_effect=[False, True])
+@patch("pivovar.wash_machine.WashMachine.keep_running",
+       side_effect=[True, False])
 @patch("pivovar.wash_machine.time")
-def test_heating(time_mock, ts, fb, mocked_backend_washing_machine):
-    ts.return_value = fb.return_value = False
-    mocked_backend_washing_machine.heating()
+def test_wash_the_kegs(time_mock, kr, kp, ts, fb, mocked_backend_wm):
+    fb.return_value = False
+    ts.return_value = False
+    mocked_backend_wm.wash_the_kegs()
 
 
-@patch("pivovar.wash_machine.WashMachine.is_fuse_blown")
-@patch("pivovar.wash_machine.WashMachine.is_total_stop_pressed")
+@patch("pivovar.wash_machine.WashMachine.is_fuse_blown",
+       side_effect=[True, False])
+@patch("pivovar.wash_machine.WashMachine.is_total_stop_pressed",
+       side_effect=[True, False])
 @patch("pivovar.wash_machine.time")
-def test_reset(time_mock, ts, fb, mocked_backend_washing_machine):
-    ts.return_value = fb.return_value = False
-    mocked_backend_washing_machine.reset()
+def test_wait_until_inputs_ok(time_mock, fb, ts, mocked_backend_wm):
+    mocked_backend_wm.wait_until_inputs_ok()
 
 
-def test_washing_machine_add_temp(mocked_backend_washing_machine):
-    wm = mocked_backend_washing_machine
+def test_washing_machine_add_temp(mocked_backend_wm):
+    wm = mocked_backend_wm
     for i in range(wm.MAX_TEMP_SAMPLES_COUNT+2):
         wm.add_temp(datetime.now() + timedelta(seconds=i), i)
     assert len(wm.temp_log) == wm.MAX_TEMP_SAMPLES_COUNT
 
 
 @patch('pivovar.unipi.Client')
-def test_check(rpc_client_mock, mocked_backend_washing_machine):
-    wash_machine = mocked_backend_washing_machine
+def test_check(rpc_client_mock, mocked_backend_wm):
+    wash_machine = mocked_backend_wm
     backend = unipi.UniPiJSONRPC('someaddress')
     backend.server.sensor_get.return_value = (
         80.2, False, 1554587741.331581, 15)
