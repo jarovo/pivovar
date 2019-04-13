@@ -1,0 +1,2 @@
+class PivovarError(Exception):
+    pass

@@ -3,6 +3,7 @@ import logging
 from collections import namedtuple
 
 from pivovar import config as cfg
+from pivovar import PivovarError
 from pivovar.jsonrpc import Client
 
 logger = logging.getLogger('unipi')
@@ -69,9 +70,5 @@ class UniPiJSONRPC(UniPi):
                              ("on" if error else "off"), exc)
 
 
-class UniPiError(Exception):
-    pass
-
-
-class LostSensor(UniPiError):
+class LostSensor(PivovarError):
     pass

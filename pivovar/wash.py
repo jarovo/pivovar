@@ -1,10 +1,8 @@
 from __future__ import print_function
 
 import argparse
-from datetime import datetime
 import logging
 import os
-import time
 from threading import Thread
 from flask import Flask
 from flask_restplus import Resource, fields
@@ -12,7 +10,7 @@ from flask_restplus import Api
 from flask_cors import CORS
 
 import pivovar.config as cfg
-from pivovar import phases
+from pivovar import wash_machine
 from pivovar.unipi import UniPiJSONRPC
 
 
@@ -32,38 +30,7 @@ api = Api(app)
 ERROR_SLEEP_TIME = 1
 
 
-def log_time(arg):
-    logger.debug("From print_time", arg, time.time())
-
-
-class WashMachine(object):
-    MAX_TEMP_SAMPLES_COUNT = int(60*60*24 / cfg.REAL_TEMP_UPDATE_SECONDS)
-
-    def __init__(self):
-        self.current_phase = 'starting'
-        self.logger = logging.getLogger('keg_wash')
-        self.temp_log = []
-        self.required_temp = cfg.REQ_TEMP
-
-    def phase_started(self, name):
-        self.current_phase = name
-
-    def phase_finished(self, name):
-        self.current_phase = 'idle'
-
-    def add_temp(self, time, temp):
-        self.temp_log.append((time, temp))
-        self.temp_log = self.temp_log[-self.MAX_TEMP_SAMPLES_COUNT:]
-        logger.info(
-            'Added wash machine water temperature %0.1f into the temp_log',
-            temp)
-
-    @property
-    def phases(self):
-        return [p for p in phases.phases.keys()]
-
-
-wash_machine = WashMachine()
+wash_machine = wash_machine.WashMachine()
 
 
 washing_machine_model = api.model('Washing machine', {
@@ -91,17 +58,6 @@ class WashMachineResource(Resource):
         return wash_machine
 
 
-def temps_update(wash_machine, backend):
-    while True:
-        try:
-            sensor = backend.checked_sensor(cfg.TEMP_SENSOR)
-            wash_machine.add_temp(datetime.now(), sensor.value)
-            time.sleep(cfg.REAL_TEMP_UPDATE_SECONDS)
-        except Exception as exc:
-            logger.exception('Error happened in the temps update: %s', exc)
-            time.sleep(ERROR_SLEEP_TIME)
-
-
 def init():
     parser = argparse.ArgumentParser(description='Keg washing control.')
     parser.add_argument('--unipi_jsonrpc', type=str,
@@ -109,15 +65,13 @@ def init():
                         help='Address to of unipi JSON RPC server.')
     args = parser.parse_args()
     backend = UniPiJSONRPC(args.unipi_jsonrpc)
+    wash_machine.backend = backend
 
     wash_thread = Thread(name='washing machine',
-                         target=phases.wash_the_kegs,
-                         args=(backend,))
-    phases.add_phases_listener(wash_machine)
+                         target=wash_machine.wash_the_kegs)
 
     temps_update_thread = Thread(name='temps updater',
-                                 target=temps_update,
-                                 args=(wash_machine, backend))
+                                 target=wash_machine.temps_update)
 
     temps_update_thread.daemon = True
     temps_update_thread.start()

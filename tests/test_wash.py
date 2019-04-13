@@ -1,17 +1,11 @@
 import json
 from datetime import datetime, timedelta
 from pivovar import wash
-from pivovar import phases
+from pivovar import wash_machine
 from pivovar import config as cfg
 from pivovar import unipi
 import pytest
 from .themock import MagicMock, patch
-
-
-@pytest.fixture
-def phases_patched():
-    phases.delay = MagicMock()
-    yield phases
 
 
 @pytest.fixture
@@ -22,21 +16,43 @@ def backend():
     yield backend
 
 
-@patch("pivovar.phases.time")
-def test_heating(time_mock, backend, phases_patched):
-    phases_patched.heating(backend)
+@pytest.fixture
+def mocked_backend_washing_machine(backend):
+    wm = wash_machine.WashMachine()
+    wm.backend = backend
+    yield wm
 
 
-@patch("pivovar.phases.time")
-def test_reset(time_mock, backend, phases_patched):
-    phases_patched.reset(backend)
+@patch("pivovar.wash_machine.WashMachine.is_fuse_blown")
+@patch("pivovar.wash_machine.WashMachine.is_total_stop_pressed")
+@patch("pivovar.wash_machine.time")
+def test_heating(time_mock, ts, fb, mocked_backend_washing_machine):
+    ts.return_value = fb.return_value = False
+    mocked_backend_washing_machine.heating()
 
 
-def test_washing_machine_add_temp():
-    wm = wash.WashMachine()
+@patch("pivovar.wash_machine.WashMachine.is_fuse_blown")
+@patch("pivovar.wash_machine.WashMachine.is_total_stop_pressed")
+@patch("pivovar.wash_machine.time")
+def test_reset(time_mock, ts, fb, mocked_backend_washing_machine):
+    ts.return_value = fb.return_value = False
+    mocked_backend_washing_machine.reset()
+
+
+def test_washing_machine_add_temp(mocked_backend_washing_machine):
+    wm = mocked_backend_washing_machine
     for i in range(wm.MAX_TEMP_SAMPLES_COUNT+2):
         wm.add_temp(datetime.now() + timedelta(seconds=i), i)
     assert len(wm.temp_log) == wm.MAX_TEMP_SAMPLES_COUNT
+
+
+@patch('pivovar.unipi.Client')
+def test_check(rpc_client_mock, mocked_backend_washing_machine):
+    wash_machine = mocked_backend_washing_machine
+    backend = unipi.UniPiJSONRPC('someaddress')
+    backend.server.sensor_get.return_value = (
+        80.2, False, 1554587741.331581, 15)
+    wash_machine.check()
 
 
 @pytest.fixture
