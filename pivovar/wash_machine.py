@@ -64,21 +64,29 @@ class WashMachine(object):
         self.current_phase = 'idle'
 
     def add_temp(self, time, temp):
-        self.temp_log.append((time, temp))
+        if temp is None:
+            self.temp_log.append((time, None))
+            logger.info(
+                'Added missing value of wash machine water temperature'
+                'into the temp_log')
+        else:
+            self.temp_log.append((time, temp))
+            logger.info(
+                'Added wash machine water temperature %0.1f into the temp_log',
+                temp)
+
         self.temp_log = self.temp_log[-self.MAX_TEMP_SAMPLES_COUNT:]
-        logger.info(
-            'Added wash machine water temperature %0.1f into the temp_log',
-            temp)
 
     def temps_update(self):
         while True:
             try:
                 sensor = self.backend.checked_sensor(cfg.TEMP_SENSOR)
-                self.add_temp(datetime.now(), sensor.value)
-                time.sleep(cfg.REAL_TEMP_UPDATE_SECONDS)
             except Exception as exc:
                 logger.exception('Error happened in the temps update: %s', exc)
-                time.sleep(ERROR_SLEEP_TIME)
+                self.add_temp(datetime.now(), None)
+            else:
+                self.add_temp(datetime.now(), sensor.value)
+            time.sleep(cfg.REAL_TEMP_UPDATE_SECONDS)
 
     def is_keg_present(self):
         return self.backend.get_input(cfg.KEG_PRESENT)

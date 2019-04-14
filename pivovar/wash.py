@@ -46,7 +46,7 @@ class RealTemps(Resource):
                 item[0].strftime('%Y-%m-%d %H:%M:%S') for item in
                 wash_machine.temp_log
             ],
-            'temps': [str(item[1]) for item in wash_machine.temp_log]}
+            'temps': [item[1] for item in wash_machine.temp_log]}
 
 
 @api.route('/wash_machine')

@@ -75,10 +75,18 @@ def flask_client(flask_app):
 
 
 def test_real_temps(flask_client):
+    date = datetime(2018, 8, 24, 15, 3, 54)
+    wash.wash_machine.add_temp(date, 0)
     date = datetime(2018, 8, 24, 15, 3, 55)
     wash.wash_machine.add_temp(date, 1)
+    date = datetime(2018, 8, 24, 15, 3, 56)
+    wash.wash_machine.add_temp(date, None)
     response = json.loads(flask_client.get('/temp_log').data)
-    assert {'datetime': ["2018-08-24 15:03:55"], 'temps': ["1"]} == response
+    expected = {'datetime': ["2018-08-24 15:03:54",
+                             "2018-08-24 15:03:55",
+                             "2018-08-24 15:03:56"],
+                'temps': ["0", "1", None]}
+    expected == response
 
 
 def test_index(flask_client):
