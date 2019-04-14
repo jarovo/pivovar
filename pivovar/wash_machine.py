@@ -8,7 +8,7 @@ from pivovar.jsonrpc import ProtocolError
 
 
 logger = logging.getLogger('phases')
-ERROR_SLEEP_TIME = .3
+ERROR_SLEEP_TIME = 1.
 
 
 def phase(name):
