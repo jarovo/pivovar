@@ -202,7 +202,7 @@ class WashMachine(object):
             backend.checked_sensor(cfg.TEMP_SENSOR)
         except ProtocolError:
             logger.error('Sensor "%s" not found!', cfg.TEMP_SENSOR)
-            failed.append('temp_sensor ' + rly)
+            failed.append('temp_sensor ' + cfg.TEMP_SENSOR)
 
         if failed:
             raise Exception('Failed to find some inputs or outputs! ({})'
@@ -307,6 +307,6 @@ class WashMachine(object):
                         break
                     except Exception as exc:
                         logger.exception('Exception happened in phase %s: %s',
-                                         phase, exc)
+                                         phase.phase_name, exc)
                         backend.signal_error(True)
                         time.sleep(ERROR_SLEEP_TIME)
