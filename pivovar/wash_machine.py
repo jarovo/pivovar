@@ -35,6 +35,19 @@ class WashMachine(object):
         self.required_temp = cfg.REQ_TEMP
         self.backend = None
 
+        self.wash_cycle = (
+           self.check,
+           self.wait_for_keg,
+           self.heating,
+           self.prewash,
+           self.drain,
+           self.wash_with_lye,
+           self.rinse_with_cold_water,
+           self.wash_with_hot_water,
+           self.dry,
+           self.fill_with_co2
+        )
+
     @staticmethod
     def keep_running():
         return True
@@ -273,19 +286,7 @@ class WashMachine(object):
     def wash_the_kegs(self):
         backend = self.backend
         while self.keep_running():
-            wash_cycle = (
-                self.check,
-                self.wait_for_keg,
-                self.heating,
-                self.prewash,
-                self.drain,
-                self.wash_with_lye,
-                self.rinse_with_cold_water,
-                self.wash_with_hot_water,
-                self.dry,
-                self.fill_with_co2
-            )
-            for phase in wash_cycle:
+            for phase in self.wash_cycle:
                 while True:
                     try:
                         backend.signal_error(False)
