@@ -41,6 +41,7 @@ TUNNEL_LOCAL_PORT = 5020
 TUNNEL_REMOTE_BIND_PORT = 502
 DEFAULT_PRIO = 10
 
+MOTOR_VALVES = 'al_lye_or_water', 'al_drain_or_recirculation'
 MOTOR_VALVE_TRANSITION_SECONDS = 3
 MOTOR_VALVE_TRANSITIONING = 'al_motor_valve_transitioning'
 """ Modbus coil to turn on in each program phase."""

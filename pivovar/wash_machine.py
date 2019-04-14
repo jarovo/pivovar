@@ -151,10 +151,14 @@ class WashMachine(object):
     def reset(self):
         backend = self.backend
         backend.set_output(cfg.WAITING_FOR_INPUT_LAMP, False)
+        wait_for_motor_valve = False
         for rly in backend.ALL_RLYS:
             if backend.get_output(rly):
                 backend.set_output(rly, False)
-        time.sleep(cfg.MOTOR_VALVE_TRANSITION_SECONDS)
+                if rly in cfg.MOTOR_VALVES:
+                    wait_for_motor_valve = True
+        if wait_for_motor_valve:
+            time.sleep(cfg.MOTOR_VALVE_TRANSITION_SECONDS)
         self.wait_until_inputs_ok()
 
     @phase('check')
