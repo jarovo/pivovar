@@ -97,6 +97,21 @@ class WashMachine(object):
     def is_fuse_blown(self):
         return not self.backend.get_input(cfg.FUSE_OK)
 
+    def is_50l_keg_selected(self):
+        return self.backend.get_input(cfg.KEG_50L)
+
+    def is_aux_wash_selected(self):
+        return self.backend.get_input(cfg.AUX_WASH)
+
+    def main_phase_delay_coef(self):
+        if self.is_aux_wash_selected():
+            return 5
+
+        if self.is_50l_keg_selected():
+            return 1
+        else:
+            return .75
+
     def wait_until_inputs_ok(self):
         previous_is_total_stop_pressed = False
         previous_is_fuse_blown = False
@@ -245,7 +260,7 @@ class WashMachine(object):
         self.turn_motor_valve(cfg.DRAIN_OR_RECIRCULATION_RLY, cfg.DRAIN)
         backend.set_output(cfg.DRAIN_RLY, cfg.ON)
         backend.set_output(cfg.AIR_RLY, cfg.ON)
-        self.delay(5)
+        self.delay(5 * self.main_phase_delay_coef())
         backend.set_output(cfg.DRAIN_RLY, cfg.OFF)
         backend.set_output(cfg.AIR_RLY, cfg.OFF)
 
@@ -254,7 +269,7 @@ class WashMachine(object):
         backend = self.backend
         self.turn_motor_valve(cfg.LYE_OR_WATER_RLY, cfg.LYE)
         backend.set_output(cfg.PUMP_RLY, cfg.ON)
-        self.delay(50)
+        self.delay(50 * self.main_phase_delay_coef())
         backend.set_output(cfg.PUMP_RLY, cfg.OFF)
         self.turn_motor_valve(cfg.LYE_OR_WATER_RLY, cfg.WATER)
 
@@ -264,7 +279,7 @@ class WashMachine(object):
         self.turn_motor_valve(cfg.DRAIN_OR_RECIRCULATION_RLY,
                               cfg.RECIRCULATION)
         backend.set_output(cfg.COLD_WATER_RLY, cfg.ON)
-        self.delay(30)
+        self.delay(30 * self.main_phase_delay_coef())
         backend.set_output(cfg.COLD_WATER_RLY, cfg.OFF)
         self.turn_motor_valve(cfg.DRAIN_OR_RECIRCULATION_RLY, cfg.DRAIN)
         self.system_flush(1)
@@ -275,7 +290,7 @@ class WashMachine(object):
         self.turn_motor_valve(cfg.DRAIN_OR_RECIRCULATION_RLY,
                               cfg.RECIRCULATION)
         backend.set_output(cfg.PUMP_RLY, cfg.ON)
-        self.delay(30)
+        self.delay(30 * self.main_phase_delay_coef())
         backend.set_output(cfg.PUMP_RLY, cfg.OFF)
         self.turn_motor_valve(cfg.DRAIN_OR_RECIRCULATION_RLY, cfg.OFF)
 
@@ -284,7 +299,7 @@ class WashMachine(object):
         backend = self.backend
         self.turn_motor_valve(cfg.DRAIN_OR_RECIRCULATION_RLY, cfg.DRAIN)
         backend.set_output(cfg.AIR_RLY, cfg.ON)
-        self.delay(30)
+        self.delay(30 * self.main_phase_delay_coef())
         backend.set_output(cfg.AIR_RLY, cfg.OFF)
         backend.set_output(cfg.DRAIN_RLY, cfg.OFF)
 
@@ -292,7 +307,7 @@ class WashMachine(object):
     def fill_with_co2(self):
         backend = self.backend
         backend.set_output(cfg.CO2_RLY, cfg.ON)
-        self.delay(10)
+        self.delay(10 * self.main_phase_delay_coef())
         backend.set_output(cfg.CO2_RLY, cfg.OFF)
 
     def wash_the_kegs(self):

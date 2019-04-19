@@ -22,7 +22,8 @@ WAITING_FOR_INPUT_LAMP = 'al_waiting_for_input_lamp'
 FUSE_OK = 'al_fuse_ok'
 TOTAL_STOP = 'al_total_stop'
 KEG_PRESENT = 'al_keg_present'
-
+KEG_50L = 'al_keg_50l'
+AUX_WASH = 'al_aux_wash'
 
 # Define relay constants.
 ON = LYE = RECIRCULATION = True
