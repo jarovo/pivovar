@@ -1,11 +1,12 @@
 {% extends "base.html" %}
+{% block title %}{{ _('Keg washing machine.') }}{% endblock %}
 {% block content %}
       <div class="col-sm-3">
-        <h3>Keg washing machine.</h3>
+        <h3>{{ _("Washing phases.") }}</h3>
         <div class="list-group" id="phases"></div>
       </div>
       <div class="col-sm-9">
-        <h3>Washing machine water temps</h3>
+        <h3>{{ _("Water temperature in time.") }}</h3>
         <div id="temp_plot" />
       </div>
     </div>
@@ -15,7 +16,7 @@
         $.getJSON('{{ temp_log_url }}', function (data) {
             var temp_log = {
                 mode: 'lines+markers',
-                name: 'skutečná teplota',
+                name: '{{ _('temperature') }}',
                 line: {'shape': 'spline'},
                 type: 'scatter'
             }
