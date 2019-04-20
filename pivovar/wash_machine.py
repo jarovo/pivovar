@@ -11,6 +11,10 @@ logger = logging.getLogger('phases')
 ERROR_SLEEP_TIME = 1.
 
 
+def N_(message):
+    return message
+
+
 def phase(name):
     def decorator(f):
         @wraps(f)
@@ -170,7 +174,7 @@ class WashMachine(object):
                 break
             self.delay(t_off)
 
-    @phase("reset")
+    @phase(N_("reset"))
     def reset(self):
         backend = self.backend
         backend.set_output(cfg.WAITING_FOR_INPUT_LAMP, False)
@@ -184,7 +188,7 @@ class WashMachine(object):
             time.sleep(cfg.MOTOR_VALVE_TRANSITION_SECONDS)
         self.wait_until_inputs_ok()
 
-    @phase('check')
+    @phase(N_('check'))
     def check(self):
         backend = self.backend
         failed = []
@@ -223,7 +227,7 @@ class WashMachine(object):
             raise Exception('Failed to find some inputs or outputs! ({})'
                             .format(', '.join(failed)))
 
-    @phase('waiting for keg')
+    @phase(N_('waiting for keg'))
     def wait_for_keg(self):
         backend = self.backend
         logging.info('Waiting for keg.')
@@ -232,7 +236,7 @@ class WashMachine(object):
             time.sleep(.01)
             self.wait_until_inputs_ok()
 
-    @phase('heating')
+    @phase(N_('heating'))
     def heating(self):
         backend = self.backend
         actual_temp = backend.temp(cfg.TEMP_SENSOR)
@@ -250,11 +254,11 @@ class WashMachine(object):
             actual_temp, cfg.REQ_TEMP)
         self.wait_until_inputs_ok()
 
-    @phase('prewashing')
+    @phase(N_('prewashing'))
     def prewash(self):
         self.pulse(cfg.COLD_WATER_RLY, 5, 30, 0.8)
 
-    @phase('draining')
+    @phase(N_('draining'))
     def drain(self):
         backend = self.backend
         self.turn_motor_valve(cfg.DRAIN_OR_RECIRCULATION_RLY, cfg.DRAIN)
@@ -264,7 +268,7 @@ class WashMachine(object):
         backend.set_output(cfg.DRAIN_RLY, cfg.OFF)
         backend.set_output(cfg.AIR_RLY, cfg.OFF)
 
-    @phase('washing with lye')
+    @phase(N_('washing with lye'))
     def wash_with_lye(self):
         backend = self.backend
         self.turn_motor_valve(cfg.LYE_OR_WATER_RLY, cfg.LYE)
@@ -273,7 +277,7 @@ class WashMachine(object):
         backend.set_output(cfg.PUMP_RLY, cfg.OFF)
         self.turn_motor_valve(cfg.LYE_OR_WATER_RLY, cfg.WATER)
 
-    @phase('washing with cold water')
+    @phase(N_('washing with cold water'))
     def rinse_with_cold_water(self):
         backend = self.backend
         self.turn_motor_valve(cfg.DRAIN_OR_RECIRCULATION_RLY,
@@ -284,7 +288,7 @@ class WashMachine(object):
         self.turn_motor_valve(cfg.DRAIN_OR_RECIRCULATION_RLY, cfg.DRAIN)
         self.system_flush(1)
 
-    @phase('washing with hot water')
+    @phase(N_('washing with hot water'))
     def wash_with_hot_water(self):
         backend = self.backend
         self.turn_motor_valve(cfg.DRAIN_OR_RECIRCULATION_RLY,
@@ -294,7 +298,7 @@ class WashMachine(object):
         backend.set_output(cfg.PUMP_RLY, cfg.OFF)
         self.turn_motor_valve(cfg.DRAIN_OR_RECIRCULATION_RLY, cfg.OFF)
 
-    @phase('drying')
+    @phase(N_('drying'))
     def dry(self):
         backend = self.backend
         self.turn_motor_valve(cfg.DRAIN_OR_RECIRCULATION_RLY, cfg.DRAIN)
@@ -303,7 +307,7 @@ class WashMachine(object):
         backend.set_output(cfg.AIR_RLY, cfg.OFF)
         backend.set_output(cfg.DRAIN_RLY, cfg.OFF)
 
-    @phase('filling with CO2')
+    @phase(N_('filling with CO2'))
     def fill_with_co2(self):
         backend = self.backend
         backend.set_output(cfg.CO2_RLY, cfg.ON)

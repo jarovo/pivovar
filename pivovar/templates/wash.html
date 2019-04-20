@@ -3,7 +3,11 @@
 {% block content %}
       <div class="col-sm-3">
         <h3>{{ _("Washing phases.") }}</h3>
-        <div class="list-group" id="phases"></div>
+        <div class="list-group" id="phases">
+          {% for phase in wash_machine.phases %}
+          <a id="{{ phase }}" class="list-group-item">{{ _(phase) }}</a>
+          {% endfor %}
+        </div>
       </div>
       <div class="col-sm-9">
         <h3>{{ _("Water temperature in time.") }}</h3>
@@ -36,31 +40,14 @@
         })
     }
 
-    function create_phase(phases, content, active) {
-        var li = document.createElement("a")
-        li.classList.add('list-group-item')
-        if (active) {
-            li.classList.add('active')
-        }
-        var t = document.createTextNode(content);
-        li.appendChild(t)
-        phases.appendChild(li)
-    }
-
     function update_phases() {
         $.getJSON('{{ wash_machine_url }}', function (data) {
             wash_machine = data
-
-            phases = document.getElementById("phases");
-
-            while (phases.hasChildNodes()) {
-                phases.removeChild(phases.lastChild);
-            }
-
-            wash_machine.phases.forEach(function(phase){
-                create_phase(phases, phase,
-                             phase == wash_machine.current_phase)
-            })
+            const phases = document.getElementById("phases");
+            const actives = phases.querySelectorAll(".active")
+            actives.forEach(
+                function(node){ node.classList.remove('active') })
+            document.getElementById(wash_machine.current_phase).classList.add('active')
         });
     }
 

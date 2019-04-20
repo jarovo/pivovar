@@ -1,4 +1,5 @@
 from pivovar import config
+import requests
 from flask import Flask, render_template, send_from_directory, request
 from flask_babel import Babel
 from urllib.parse import urljoin
@@ -33,10 +34,13 @@ def static_files(filename):
 @app.route('/')
 def wash():
     wash_url = app.config['WASH_URL']
+
+    wm = requests.get(urljoin(wash_url, '/wash_machine')).json()
     return render_template(
         'wash.html',
         temp_log_url=urljoin(wash_url, '/temp_log'),
-        wash_machine_url=urljoin(wash_url, '/wash_machine')
+        wash_machine_url=urljoin(wash_url, '/wash_machine'),
+        wash_machine=wm
     )
 
 
