@@ -208,7 +208,7 @@ class WashMachine(object):
                 logger.error('Relay "%s" not configured in UniPi!', rly)
                 failed.append('relay ' + rly)
 
-        for inp in (cfg.KEG_PRESENT,):
+        for inp in backend.ALL_INPUTS:
             logger.info('Checking input named "%s" exists.', inp)
             try:
                 backend.get_input(inp)

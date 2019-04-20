@@ -21,6 +21,8 @@ class UniPi(object):
 
     ALL_OUTPUTS = (cfg.ERROR_LAMP, cfg.READY_LAMP, cfg.WAITING_FOR_INPUT_LAMP)
 
+    ALL_INPUTS = (cfg.TOTAL_STOP, cfg.KEG_PRESENT, cfg.KEG_50L, cfg.AUX_WASH)
+
     def __init__(self):
         pass
 
