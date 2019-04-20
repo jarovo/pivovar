@@ -2,9 +2,10 @@ import logging
 import time
 from functools import wraps
 from datetime import datetime
+from itertools import chain
 
 import pivovar.config as cfg
-from pivovar.jsonrpc import ProtocolError
+import pivovar.wash_machine_io as wm_io
 
 
 logger = logging.getLogger('phases')
@@ -31,15 +32,26 @@ def phase(name):
 class WashMachine(object):
     MAX_TEMP_SAMPLES_COUNT = int(60*60*24 / cfg.REAL_TEMP_UPDATE_SECONDS)
 
+    ALL_RLYS = (cfg.AIR_RLY, cfg.PUMP_RLY, cfg.LYE_OR_WATER_RLY, cfg.CO2_RLY,
+                cfg.COLD_WATER_RLY, cfg.DRAIN_OR_RECIRCULATION_RLY,
+                cfg.DRAIN_RLY)
+
+    ALL_OUTPUTS = (cfg.ERROR_LAMP, cfg.READY_LAMP, cfg.WAITING_FOR_INPUT_LAMP)
+
+    ALL_INPUTS = (cfg.TOTAL_STOP,
+                  cfg.FUSE_OK,
+                  cfg.KEG_PRESENT,
+                  cfg.KEG_50L,
+                  cfg.AUX_WASH)
+
     def __init__(self):
         self.current_phase = 'starting'
         self.errors = set()
         self.logger = logging.getLogger('keg_wash')
         self.temp_log = []
         self.required_temp = cfg.REQ_TEMP
-        self.backend = None
 
-        self.wash_cycle = (
+        self.wash_cycle = [
            self.check,
            self.wait_for_keg,
            self.heating,
@@ -50,10 +62,42 @@ class WashMachine(object):
            self.wash_with_hot_water,
            self.dry,
            self.fill_with_co2
-        )
+        ]
+
+        self.rly = None
+        self.inp = None
+        self.out = None
+        self.water_temp = None
+        self.mv = None
+
+    def init_io(self, unipi_jsonrpc):
+        self.unipi_jsonrpc = unipi_jsonrpc
+        self.rly = wm_io.IOGroup.from_aliases(
+                self, wm_io.Switchable, self.ALL_RLYS)
+        self.inp = wm_io.IOGroup.from_aliases(
+                self, wm_io.Input, self.ALL_INPUTS)
+        self.out = wm_io.IOGroup.from_aliases(
+                self, wm_io.Switchable, self.ALL_OUTPUTS)
+        self.mv = wm_io.IOGroup()
+        self.mv._add(
+                'water_or_lye',
+                wm_io.WaterOrLye(self, 'al_lye_or_water'))
+        self.mv._add(
+                'drain_or_recirculation',
+                wm_io.DrainOrRecirculation(self, 'al_drain_or_recirculation'))
+        self.water_temp = wm_io.TemperatureSensor(self, cfg.TEMP_SENSOR)
+        self.all_io = list(chain(self.rly.all,
+                                 self.inp.all,
+                                 self.out.all,
+                                 self.mv.all,
+                                 [self.water_temp]))
 
     @staticmethod
     def keep_running():
+        return True
+
+    @staticmethod
+    def keep_repeating():
         return True
 
     @property
@@ -82,30 +126,30 @@ class WashMachine(object):
         self.temp_log = self.temp_log[-self.MAX_TEMP_SAMPLES_COUNT:]
 
     def temps_update(self):
-        while True:
+        while self.keep_running():
             try:
-                sensor = self.backend.checked_sensor(cfg.TEMP_SENSOR)
+                temp = self.water_temp.read_temperature()
             except Exception as exc:
                 logger.exception('Error happened in the temps update: %s', exc)
                 self.add_temp(datetime.now(), None)
             else:
-                self.add_temp(datetime.now(), sensor.value)
+                self.add_temp(datetime.now(), temp)
             time.sleep(cfg.REAL_TEMP_UPDATE_SECONDS)
 
     def is_keg_present(self):
-        return self.backend.get_input(cfg.KEG_PRESENT)
+        return self.inp.keg_present.read_state()
 
     def is_total_stop_pressed(self):
-        return self.backend.get_input(cfg.TOTAL_STOP)
+        return self.inp.total_stop.read_state()
 
     def is_fuse_blown(self):
-        return not self.backend.get_input(cfg.FUSE_OK)
+        return not self.inp.fuse_ok.read_state()
 
     def is_50l_keg_selected(self):
-        return self.backend.get_input(cfg.KEG_50L)
+        return self.inp.keg_50l.read_state()
 
     def is_aux_wash_selected(self):
-        return self.backend.get_input(cfg.AUX_WASH)
+        return self.inp.aux_wash.read_state()
 
     def main_phase_delay_coef(self):
         if self.is_aux_wash_selected():
@@ -144,103 +188,70 @@ class WashMachine(object):
         time.sleep(ticks * cfg.TICK)
         self.wait_until_inputs_ok()
 
-    def turn_motor_valve(self, relay, state):
-        self.backend.set_output(relay, state)
-        time.sleep(cfg.MOTOR_VALVE_TRANSITION_SECONDS)
-
     @staticmethod
     def is_temp_ok(temp):
         return float(temp) >= cfg.REQ_TEMP
 
     def system_flush(self, ticks):
-        backend = self.backend
-        self.turn_motor_valve(cfg.DRAIN_OR_RECIRCULATION_RLY, cfg.DRAIN)
-        backend.set_output(cfg.DRAIN_RLY, cfg.ON)
-        backend.set_output(cfg.AIR_RLY, cfg.ON)
+        self.mv.drain_or_recirculation.turn_to_drain()
+        self.rly.drain.turn_on()
+        self.rly.air.turn_on()
         self.delay(ticks)
-        backend.set_output(cfg.AIR_RLY, cfg.OFF)
+        self.rly.air.turn_off()
 
-    def pulse(self, rly, count, duration, duty_cycle=0.5):
+    def pulse(self, io, count, duration, duty_cycle=0.5):
         i = 0
         period = float(duration) / count
         t_on = period * duty_cycle
         t_off = period * (1 - duty_cycle)
         while True:
             i += 1
-            self.backend.set_output(rly, cfg.ON)
+            io.turn_on()
             self.delay(t_on)
-            self.backend.set_output(rly, cfg.OFF)
+            io.turn_off()
             if i >= count:
                 break
             self.delay(t_off)
 
     @phase(N_("reset"))
     def reset(self):
-        backend = self.backend
-        backend.set_output(cfg.WAITING_FOR_INPUT_LAMP, False)
-        wait_for_motor_valve = False
-        for rly in backend.ALL_RLYS:
-            if backend.get_output(rly):
-                backend.set_output(rly, False)
-                if rly in cfg.MOTOR_VALVES:
-                    wait_for_motor_valve = True
-        if wait_for_motor_valve:
-            time.sleep(cfg.MOTOR_VALVE_TRANSITION_SECONDS)
-        self.wait_until_inputs_ok()
+        self.out.waiting_for_input_lamp.turn_off()
+        rlys_to_switch = (rly for rly in self.rly.all if rly.read_state())
+        for rly in rlys_to_switch:
+            rly.turn_off()
+
+        valves_to_switch = [mv for mv in self.mv.all if mv.read_state()]
+        if any(valves_to_switch):
+            for mv in self.mv.all:
+                mv.turn_off(wait=False)
+
+            wait_time = max(mv.valve_transition_time for mv
+                            in valves_to_switch)
+            time.sleep(wait_time)
 
     @phase(N_('check'))
     def check(self):
-        backend = self.backend
         failed = []
-        for output in backend.ALL_OUTPUTS:
-            logger.info('Checking whether output named "%s" exists.', output)
-            try:
-                backend.get_output(output)
-            except ProtocolError:
-                logger.error('Output "%s" not configured in UniPi!', output)
-                failed.append('output ' + output)
-
-        for rly in backend.ALL_RLYS:
-            logger.info('Checking whether relay named "%s" exists.', rly)
-            try:
-                backend.get_output(rly)
-            except ProtocolError:
-                logger.error('Relay "%s" not configured in UniPi!', rly)
-                failed.append('relay ' + rly)
-
-        for inp in backend.ALL_INPUTS:
-            logger.info('Checking input named "%s" exists.', inp)
-            try:
-                backend.get_input(inp)
-            except ProtocolError:
-                logger.error('Input "%s" not configured in UniPi!', inp)
-                failed.append('input ' + rly)
-
-        logger.info('Checking sensor named "%s" exists.', cfg.TEMP_SENSOR)
-        try:
-            backend.checked_sensor(cfg.TEMP_SENSOR)
-        except ProtocolError:
-            logger.error('Sensor "%s" not found!', cfg.TEMP_SENSOR)
-            failed.append('temp_sensor ' + cfg.TEMP_SENSOR)
+        for io in self.all_io:
+            if not io.is_defined():
+                failed.append(io)
 
         if failed:
-            raise Exception('Failed to find some inputs or outputs! ({})'
+            raise Exception('Failed to find some IO! ({})'
                             .format(', '.join(failed)))
 
     @phase(N_('waiting for keg'))
     def wait_for_keg(self):
-        backend = self.backend
         logging.info('Waiting for keg.')
-        backend.set_output(cfg.WAITING_FOR_INPUT_LAMP, True)
+        self.out.waiting_for_input_lamp.turn_on()
         while not self.is_keg_present():
             time.sleep(.01)
             self.wait_until_inputs_ok()
 
     @phase(N_('heating'))
     def heating(self):
-        backend = self.backend
-        actual_temp = backend.temp(cfg.TEMP_SENSOR)
-        backend.set_output(cfg.WAITING_FOR_INPUT_LAMP, True)
+        actual_temp = self.water_temp.read_temperature()
+        self.out.waiting_for_input_lamp.turn_on()
         while not self.is_temp_ok(actual_temp):
             logging.info(
                 'Waiting for water (actual temperature %.2f) '
@@ -248,7 +259,7 @@ class WashMachine(object):
                 actual_temp,
                 cfg.REQ_TEMP)
             time.sleep(cfg.HEATING_SLEEP_SECONDS)
-            actual_temp = backend.temp(cfg.TEMP_SENSOR)
+            actual_temp = self.water_temp.read_temperature()
         logging.info(
             'Water ready (actual temperature %.2f. Required %.2f)',
             actual_temp, cfg.REQ_TEMP)
@@ -256,76 +267,76 @@ class WashMachine(object):
 
     @phase(N_('prewashing'))
     def prewash(self):
-        self.pulse(cfg.COLD_WATER_RLY, 5, 30, 0.8)
+        self.pulse(self.rly.cold_water, 5, 30, 0.8)
 
     @phase(N_('draining'))
     def drain(self):
-        backend = self.backend
-        self.turn_motor_valve(cfg.DRAIN_OR_RECIRCULATION_RLY, cfg.DRAIN)
-        backend.set_output(cfg.DRAIN_RLY, cfg.ON)
-        backend.set_output(cfg.AIR_RLY, cfg.ON)
+        self.mv.drain_or_recirculation.turn_to_drain()
+        self.rly.drain.turn_on()
+        self.rly.air.turn_on()
         self.delay(5 * self.main_phase_delay_coef())
-        backend.set_output(cfg.DRAIN_RLY, cfg.OFF)
-        backend.set_output(cfg.AIR_RLY, cfg.OFF)
+        self.rly.air.turn_off()
+        self.rly.drain.turn_off()
 
     @phase(N_('washing with lye'))
     def wash_with_lye(self):
-        backend = self.backend
-        self.turn_motor_valve(cfg.LYE_OR_WATER_RLY, cfg.LYE)
-        backend.set_output(cfg.PUMP_RLY, cfg.ON)
+        self.mv.water_or_lye.turn_to_lye()
+        self.rly.pump.turn_on()
         self.delay(50 * self.main_phase_delay_coef())
-        backend.set_output(cfg.PUMP_RLY, cfg.OFF)
-        self.turn_motor_valve(cfg.LYE_OR_WATER_RLY, cfg.WATER)
+        self.rly.pump.turn_off()
+        self.mv.water_or_lye.turn_to_water()
 
     @phase(N_('washing with cold water'))
     def rinse_with_cold_water(self):
-        backend = self.backend
-        self.turn_motor_valve(cfg.DRAIN_OR_RECIRCULATION_RLY,
-                              cfg.RECIRCULATION)
-        backend.set_output(cfg.COLD_WATER_RLY, cfg.ON)
+        self.mv.drain_or_recirculation.turn_to_recirculation()
+        self.rly.cold_water.turn_on()
         self.delay(30 * self.main_phase_delay_coef())
-        backend.set_output(cfg.COLD_WATER_RLY, cfg.OFF)
-        self.turn_motor_valve(cfg.DRAIN_OR_RECIRCULATION_RLY, cfg.DRAIN)
+        self.rly.cold_water.turn_off()
+        self.mv.drain_or_recirculation.turn_to_drain()
         self.system_flush(1)
 
     @phase(N_('washing with hot water'))
     def wash_with_hot_water(self):
-        backend = self.backend
-        self.turn_motor_valve(cfg.DRAIN_OR_RECIRCULATION_RLY,
-                              cfg.RECIRCULATION)
-        backend.set_output(cfg.PUMP_RLY, cfg.ON)
+        self.mv.drain_or_recirculation.turn_to_recirculation()
+        self.rly.pump.turn_on()
         self.delay(30 * self.main_phase_delay_coef())
-        backend.set_output(cfg.PUMP_RLY, cfg.OFF)
-        self.turn_motor_valve(cfg.DRAIN_OR_RECIRCULATION_RLY, cfg.OFF)
+        self.rly.pump.turn_off()
+        self.mv.drain_or_recirculation.turn_to_drain()
 
     @phase(N_('drying'))
     def dry(self):
-        backend = self.backend
-        self.turn_motor_valve(cfg.DRAIN_OR_RECIRCULATION_RLY, cfg.DRAIN)
-        backend.set_output(cfg.AIR_RLY, cfg.ON)
+        self.mv.drain_or_recirculation.turn_to_drain()
+        self.rly.air.turn_on()
         self.delay(30 * self.main_phase_delay_coef())
-        backend.set_output(cfg.AIR_RLY, cfg.OFF)
-        backend.set_output(cfg.DRAIN_RLY, cfg.OFF)
+        self.rly.air.turn_off()
+        self.rly.drain.turn_off()
 
     @phase(N_('filling with CO2'))
     def fill_with_co2(self):
-        backend = self.backend
-        backend.set_output(cfg.CO2_RLY, cfg.ON)
+        self.rly.co2.turn_on()
         self.delay(10 * self.main_phase_delay_coef())
-        backend.set_output(cfg.CO2_RLY, cfg.OFF)
+        self.rly.co2.turn_off()
 
     def wash_the_kegs(self):
-        backend = self.backend
         while self.keep_running():
             for phase in self.wash_cycle:
-                while True:
+                while self.keep_repeating():
                     try:
-                        backend.signal_error(False)
+                        self.signal_error(False)
                         self.reset()
                         phase()
                         break
                     except Exception as exc:
                         logger.exception('Exception happened in phase %s: %s',
                                          phase.phase_name, exc)
-                        backend.signal_error(True)
+                        self.signal_error(True)
                         time.sleep(ERROR_SLEEP_TIME)
+
+    def signal_error(self, error=True):
+        try:
+            if error:
+                self.out.error_lamp.turn_on()
+            else:
+                self.out.error_lamp.turn_off()
+        except Exception as exc:
+            logger.exception("Couldn't switch the error lamp: %s", exc)

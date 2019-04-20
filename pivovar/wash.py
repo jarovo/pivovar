@@ -11,7 +11,7 @@ from flask_cors import CORS
 
 import pivovar.config as cfg
 from pivovar import wash_machine
-from pivovar.unipi import UniPiJSONRPC
+from pivovar.jsonrpc import Client
 
 
 logger = logging.getLogger('keg_wash')
@@ -62,8 +62,7 @@ def init():
                         default='http://127.0.0.1/rpc',
                         help='Address to of unipi JSON RPC server.')
     args = parser.parse_args()
-    backend = UniPiJSONRPC(args.unipi_jsonrpc)
-    wash_machine.backend = backend
+    wash_machine.init_io(Client(args.unipi_jsonrpc))
 
     wash_thread = Thread(name='washing machine',
                          target=wash_machine.wash_the_kegs)

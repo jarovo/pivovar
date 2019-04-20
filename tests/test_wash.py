@@ -1,39 +1,118 @@
+import pytest
 import json
 from datetime import datetime, timedelta
+
 from pivovar import wash
 from pivovar import wash_machine
 from pivovar import config as cfg
-from pivovar import unipi
-import pytest
+
 from .themock import MagicMock, patch
 
 
 @pytest.fixture
-def backend():
-    backend = MagicMock()
-    backend.temp.return_value = cfg.REQ_TEMP
-    backend.ALL_RLYS = unipi.UniPi.ALL_RLYS
-    yield backend
+def rpc_client_mock():
+    rpc_client_mock = MagicMock()
+    yield rpc_client_mock
 
 
 @pytest.fixture
-def mocked_backend_wm(backend):
+def mocked_backend_wm(rpc_client_mock):
     wm = wash_machine.WashMachine()
-    wm.backend = backend
+    wm.init_io(rpc_client_mock)
+    wm.inp.fuse_ok.read_state = MagicMock(return_value=True)
+    wm.inp.total_stop.read_state = MagicMock(return_value=False)
+    wm.inp.keg_present.read_state = MagicMock(side_effect=[False, True])
     yield wm
 
 
-@patch("pivovar.wash_machine.WashMachine.is_fuse_blown")
-@patch("pivovar.wash_machine.WashMachine.is_total_stop_pressed")
-@patch("pivovar.wash_machine.WashMachine.is_keg_present",
-       side_effect=[False, True])
-@patch("pivovar.wash_machine.WashMachine.keep_running",
-       side_effect=[True, False])
-@patch("pivovar.wash_machine.time")
-def test_wash_the_kegs(time_mock, kr, kp, ts, fb, mocked_backend_wm):
-    fb.return_value = False
-    ts.return_value = False
+@pytest.fixture
+def phase_mock(mocked_backend_wm):
+    mocked_backend_wm.keep_running = MagicMock(side_effect=[True, False])
+    mocked_backend_wm.keep_repeating = MagicMock(side_effect=[True, False])
+    m = MagicMock()
+    mocked_backend_wm.wash_cycle = [m]
+    yield m
+
+
+@patch("time.sleep")
+def test_wash_the_kegs(sleep_mock, mocked_backend_wm, phase_mock):
     mocked_backend_wm.wash_the_kegs()
+    assert phase_mock.called
+
+
+@patch("time.sleep")
+@patch("pivovar.wash_machine.logger")
+def test_wash_the_kegs_exception(logger_mock,
+                                 sleep_mock,
+                                 mocked_backend_wm,
+                                 phase_mock):
+    phase_mock.side_effect = [Exception('mocked exception')]
+    mocked_backend_wm.wash_the_kegs()
+    assert phase_mock.called
+    assert logger_mock.exception.called
+
+
+@patch("time.sleep")
+def test_phases(sleep_mock, mocked_backend_wm):
+    wm = mocked_backend_wm
+    tested_phases = (wm.prewash, wm.drain, wm.wash_with_lye,
+                     wm.rinse_with_cold_water, wm.wash_with_hot_water, wm.dry,
+                     wm.fill_with_co2)
+    for phase in tested_phases:
+        phase()
+
+
+@patch("time.sleep")
+def test_wait_for_keg(sleep_mock, mocked_backend_wm):
+    mocked_backend_wm.inp.keg_present.read_state = MagicMock(
+        side_effect=[False, True])
+    mocked_backend_wm.wait_for_keg()
+
+
+@patch("time.sleep")
+def test_heating(sleep_mock, mocked_backend_wm):
+    mocked_backend_wm.water_temp.read_temperature = MagicMock(
+        side_effect=[20, cfg.REQ_TEMP])
+    mocked_backend_wm.heating()
+
+
+@pytest.fixture
+def all_io_value(mocked_backend_wm):
+    m = MagicMock()
+    mocked_backend_wm.all_io = [m]
+    yield m
+
+
+def test_check_fail(mocked_backend_wm, all_io_value):
+    all_io_value.is_defined.return_value = False
+    with pytest.raises(Exception):
+        mocked_backend_wm.check()
+    assert all_io_value.is_defined.called
+
+
+def test_check_pass(mocked_backend_wm, all_io_value):
+    all_io_value.is_defined.return_value = True
+    mocked_backend_wm.check()
+    assert all_io_value.is_defined.called
+
+
+def test_check(mocked_backend_wm, rpc_client_mock):
+    rpc_client_mock.sensor_get.return_value = (
+        80.2, False, 1554587741.331581, 15)
+    mocked_backend_wm.check()
+
+
+@patch("time.sleep")
+@patch("pivovar.wash_machine.logger")
+def test_temps_update(logger_mock, sleep_mock, mocked_backend_wm,
+                      rpc_client_mock):
+    mocked_backend_wm.keep_running = MagicMock(side_effect=[True, True, False])
+    rpc_client_mock.sensor_get.side_effect = [
+        (80.2, False, 1554587741.331581, 15),
+        (80.2, True, 1554587741.331581, 15)
+    ]
+    mocked_backend_wm.temps_update()
+    assert logger_mock.exception.called
 
 
 @patch("pivovar.wash_machine.WashMachine.is_fuse_blown",
@@ -50,15 +129,6 @@ def test_washing_machine_add_temp(mocked_backend_wm):
     for i in range(wm.MAX_TEMP_SAMPLES_COUNT+2):
         wm.add_temp(datetime.now() + timedelta(seconds=i), i)
     assert len(wm.temp_log) == wm.MAX_TEMP_SAMPLES_COUNT
-
-
-@patch('pivovar.unipi.Client')
-def test_check(rpc_client_mock, mocked_backend_wm):
-    wash_machine = mocked_backend_wm
-    backend = unipi.UniPiJSONRPC('someaddress')
-    backend.server.sensor_get.return_value = (
-        80.2, False, 1554587741.331581, 15)
-    wash_machine.check()
 
 
 @pytest.fixture
