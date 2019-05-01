@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 
 from pivovar import wash
 from pivovar import wash_machine
-from pivovar import config as cfg
 
 from .themock import MagicMock, patch
 
@@ -17,8 +16,9 @@ def rpc_client_mock():
 
 @pytest.fixture
 def mocked_backend_wm(rpc_client_mock):
-    wm = wash_machine.WashMachine()
-    wm.init_io(rpc_client_mock)
+    wm = wash_machine.WashMachine('test wash machine')
+    wm._unipi_jsonrpc = rpc_client_mock
+    wm.init_io()
     wm.inp.fuse_ok.read_state = MagicMock(return_value=True)
     wm.inp.total_stop.read_state = MagicMock(return_value=False)
     wm.inp.keg_present.read_state = MagicMock(side_effect=[False, True])
@@ -72,28 +72,32 @@ def test_wait_for_keg(sleep_mock, mocked_backend_wm):
 @patch("time.sleep")
 def test_heating(sleep_mock, mocked_backend_wm):
     mocked_backend_wm.water_temp.read_temperature = MagicMock(
-        side_effect=[20, cfg.REQ_TEMP])
+        side_effect=[20, mocked_backend_wm.required_water_temp])
     mocked_backend_wm.heating()
 
 
 @pytest.fixture
-def all_io_value(mocked_backend_wm):
-    m = MagicMock()
-    mocked_backend_wm.all_io = [m]
-    yield m
+def all_io_member(mocked_backend_wm):
+    class Printable(object):
+        __str__ = MagicMock()
+        is_defined = MagicMock()
+    printable_io = Printable()
+    mocked_backend_wm.all_io = [printable_io]
+    yield printable_io
 
 
-def test_check_fail(mocked_backend_wm, all_io_value):
-    all_io_value.is_defined.return_value = False
+def test_check_fail(mocked_backend_wm, all_io_member):
+    all_io_member.is_defined.return_value = False
     with pytest.raises(Exception):
         mocked_backend_wm.check()
-    assert all_io_value.is_defined.called
+    assert all_io_member.is_defined.called
+    assert all_io_member.__str__.called
 
 
-def test_check_pass(mocked_backend_wm, all_io_value):
-    all_io_value.is_defined.return_value = True
+def test_check_pass(mocked_backend_wm, all_io_member):
+    all_io_member.is_defined.return_value = True
     mocked_backend_wm.check()
-    assert all_io_value.is_defined.called
+    assert all_io_member.is_defined.called
 
 
 def test_check(mocked_backend_wm, rpc_client_mock):
@@ -126,9 +130,9 @@ def test_wait_until_inputs_ok(time_mock, fb, ts, mocked_backend_wm):
 
 def test_washing_machine_add_temp(mocked_backend_wm):
     wm = mocked_backend_wm
-    for i in range(wm.MAX_TEMP_SAMPLES_COUNT+2):
+    for i in range(wm.temp_samples_count_limit+2):
         wm.add_temp(datetime.now() + timedelta(seconds=i), i)
-    assert len(wm.temp_log) == wm.MAX_TEMP_SAMPLES_COUNT
+    assert len(wm.temp_log) == wm.temp_samples_count_limit
 
 
 @pytest.fixture

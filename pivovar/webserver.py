@@ -1,4 +1,4 @@
-from pivovar import config
+from pivovar import configure_app
 import requests
 from flask import Flask, render_template, send_from_directory, request
 from flask_babel import Babel
@@ -13,7 +13,7 @@ class DefaultConfig(object):
 
 
 app = Flask(__name__)
-config.configure_app(app)
+configure_app(app)
 babel = Babel(app)
 
 

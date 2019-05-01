@@ -1,6 +1,5 @@
 from __future__ import print_function
 
-import argparse
 import logging
 import os
 from threading import Thread
@@ -9,9 +8,7 @@ from flask_restplus import Resource, fields
 from flask_restplus import Api
 from flask_cors import CORS
 
-import pivovar.config as cfg
-from pivovar import wash_machine
-from pivovar.jsonrpc import Client
+from pivovar import wash_machine, configure_app
 
 
 logger = logging.getLogger('keg_wash')
@@ -24,11 +21,11 @@ class DefaultConfig(object):
     INSTANCE_CONFIG_FILE = 'wash.cfg'
 
 
-cfg.configure_app(app)
+configure_app(app)
 api = Api(app)
 
 
-wash_machine = wash_machine.WashMachine()
+wash_machine = wash_machine.WashMachine.from_config('wash_machine_1')
 
 
 washing_machine_model = api.model('Washing machine', {
@@ -57,13 +54,6 @@ class WashMachineResource(Resource):
 
 
 def init():
-    parser = argparse.ArgumentParser(description='Keg washing control.')
-    parser.add_argument('--unipi_jsonrpc', type=str,
-                        default='http://127.0.0.1/rpc',
-                        help='Address to of unipi JSON RPC server.')
-    args = parser.parse_args()
-    wash_machine.init_io(Client(args.unipi_jsonrpc))
-
     wash_thread = Thread(name='washing machine',
                          target=wash_machine.wash_the_kegs)
 
