@@ -13,24 +13,33 @@ OneWireSensor = namedtuple('OneWireSensor', 'value lost time interval')
 
 
 @attr.s
-class UniPiIO(object):
-    _device = attr.ib()
-    conf_key = attr.ib()
+class StructureNode(object):
+    name = attr.ib(type=str)
+
+    def __attrs_post_init__(self):
+        self.parent = None
+
+    def _to_root(self):
+        elm = self
+        while elm:
+            yield elm
+            elm = elm.parent
 
     @property
-    def name(self):
-        return self.conf_key.split('.')[-1]
+    def conf_key(self):
+        return '.'.join(o.name for o in reversed(list(self._to_root())))
+
+
+@attr.s
+class UniPiIO(StructureNode):
+    _facility = attr.ib()
 
     def _get_unipi_jsonrpc(self):
-        return self._device.unipi_jsonrpc
+        return self._facility.unipi_jsonrpc
 
     @abstractmethod
     def is_defined(self):
         pass
-
-    def __strr__(self):
-        return '{}({}, {})'.format(self.__class__.__name__, self._device.name,
-                                   self.name)
 
     def _read_config(self, section):
         pass
@@ -53,11 +62,6 @@ class UniPiReadable(UniPiIO):
         except ProtocolError:
             logger.error('IO alias %s not configured in UniPi!', self)
             return False
-
-    def __strr__(self):
-        return '{}({}, {}, {})'.format(self.__class__.__name__,
-                                       self._device.name,
-                                       self.name, self.alias)
 
     def _read_config(self, section):
         super(UniPiReadable, self)._read_config(section)
@@ -112,7 +116,7 @@ class TemperatureSensor(UniPiIO):
 
     def __str__(self):
         return '{}({}, {}, {})'.format(self.__class__.__name__,
-                                       self._device.name,
+                                       self._facility.name,
                                        self.name,
                                        self.address)
 
@@ -161,23 +165,43 @@ class WaterOrLye(MotorValve):
         self.turn_on(wait)
 
 
-class IOGroup(object):
-    def __init__(self, conf_key):
-        self.all = []
-        self.conf_key = conf_key
+@attr.s
+class IOGroup(StructureNode):
+    def __attrs_post_init__(self):
+        StructureNode.__attrs_post_init__(self)
+        self.leafs = []
+        self.groups = []
+
+    def all_leafs(self):
+        for l in self.leafs:
+            yield l
+        for g in self.traverse_groups():
+            for l in g.all_leafs():
+                yield l
+
+    def traverse_groups(self):
+        for g in self.groups:
+            for s in g.traverse_groups():
+                yield s
 
     @classmethod
-    def from_aliases(cls, device, conf_key, io_cls, aliases):
-        self = cls(conf_key)
+    def from_aliases(cls, name, facility, io_cls, aliases):
+        self = cls(name)
         for alias in aliases:
-            name = remove_al_prefix_if_exists(alias)
-            io = io_cls(device, '{}.{}'.format(conf_key, name), alias)
+            sub_name = remove_al_prefix_if_exists(alias)
+            io = io_cls(sub_name, facility, alias)
             self._add(io)
         return self
 
     def _add(self, io):
         setattr(self, io.name, io)
-        self.all.append(io)
+        io.parent = io.parent if io.parent else self
+        self.leafs.append(io)
+
+    def _add_group(self, io):
+        setattr(self, io.name, io)
+        self.groups.append(io)
+        io.parent = io.parent if io.parent else self
 
 
 def remove_al_prefix_if_exists(s):

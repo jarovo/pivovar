@@ -22,7 +22,7 @@ def get_locale():
     # Try to guess the language from the user accept
     # header the browser transmits.  We support en/cs in this
     # example.  The best match wins.
-    loc = request.accept_languages.best_match(['en', 'cs'])
+    loc = request.accept_languages.best_match(['cs', 'en'])
     return loc
 
 

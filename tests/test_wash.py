@@ -19,9 +19,9 @@ def mocked_backend_wm(rpc_client_mock):
     wm = wash_machine.WashMachine('test wash machine')
     wm._unipi_jsonrpc = rpc_client_mock
     wm.init_io()
-    wm.inp.fuse_ok.read_state = MagicMock(return_value=True)
-    wm.inp.total_stop.read_state = MagicMock(return_value=False)
-    wm.inp.keg_present.read_state = MagicMock(side_effect=[False, True])
+    wm.io.inp.fuse_ok.read_state = MagicMock(return_value=True)
+    wm.io.inp.total_stop.read_state = MagicMock(return_value=False)
+    wm.io.inp.keg_present.read_state = MagicMock(side_effect=[False, True])
     yield wm
 
 
@@ -64,14 +64,14 @@ def test_phases(sleep_mock, mocked_backend_wm):
 
 @patch("time.sleep")
 def test_wait_for_keg(sleep_mock, mocked_backend_wm):
-    mocked_backend_wm.inp.keg_present.read_state = MagicMock(
+    mocked_backend_wm.io.inp.keg_present.read_state = MagicMock(
         side_effect=[False, True])
     mocked_backend_wm.wait_for_keg()
 
 
 @patch("time.sleep")
 def test_heating(sleep_mock, mocked_backend_wm):
-    mocked_backend_wm.water_temp.read_temperature = MagicMock(
+    mocked_backend_wm.io.water_temp.read_temperature = MagicMock(
         side_effect=[20, mocked_backend_wm.required_water_temp])
     mocked_backend_wm.heating()
 
@@ -82,7 +82,7 @@ def all_io_member(mocked_backend_wm):
         __str__ = MagicMock()
         is_defined = MagicMock()
     printable_io = Printable()
-    mocked_backend_wm.all_io = [printable_io]
+    mocked_backend_wm.io.leafs = [printable_io]
     yield printable_io
 
 
