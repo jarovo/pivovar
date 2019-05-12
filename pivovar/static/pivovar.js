@@ -1,0 +1,107 @@
+wm_url = "http://localhost:5001"
+wash_machines = {}
+
+fetch(wm_url + '/wash_machine')
+    .then(response => response.json())
+    .catch(error => console.error('Error:', error))
+    .then(response => {
+        Vue.set(wash_machines, response.name, response);
+        Vue.set(wash_machines[response.name], 'plot_data', {
+            datetime: [], temps:[]})
+    });
+
+function update_data() {
+    Object.keys(wash_machines).forEach(wash_machine_id => {
+        const data = { datetime: [ 1, 2, 3], temps: [1, 3, 2] }
+        //$.getJSON(wm_url + 'temp_log', function (data) {
+        //})
+
+        wash_machines[wash_machine_id].plot_data = data
+    })
+}
+
+function update_temp_log(wash_machine_id, temp_log) {
+    const data = [{
+        x: temp_log['datetime'],
+        y: temp_log['temps'],
+        mode: 'lines+markers',
+        name: '{templota}',
+        line: {'shape': 'spline'},
+        type: 'scatter'
+    }]
+
+    const layout = {legend: {
+        y: 0.5,
+        traceorder: 'reversed',
+        font: {size: 16},
+        yref: 'paper'
+    }};
+
+    Plotly.react(wash_machine_id + "_temp_plot", data, layout);
+};
+
+window.setInterval(update_data, 2000)
+
+console.info(wash_machines['wash_machine_1'])
+Vue.component('wash-machine', {
+    props: ['wm_name'],
+    template: `
+    <div class="wash-machine" v-bind:id="wm_name" >
+      <h3>Wash machine {{wm_name}}</h3>
+      <div class="col-sm-3">
+        <h3>Phases</h3>
+        <div class="list-group" id="phases">
+          <wash-machine-phase v-for="phase_name in phases" :wm_id="wm_name" :phase_name="phase_name"></wash-machine-phase>
+        </div>
+      </div>
+      <div class="col-sm-9">
+        <h3>{ _("Water temperature in time.") }</h3>
+        <div v-bind:id="plot_id" />
+      </div>
+    </div>
+    `,
+    computed: {
+        phases: function() { return wash_machines[this.wm_name]['phases'] },
+        plot_id: function() { return this.wm_name + '_temp_plot' },
+        // plot_data: Object.is(wash_machines[this.wm_name], undefined) ? {} : wash_machines[this.wm_name].plot_data;
+        plot_data: function() { return wash_machines[this.wm_name].plot_data }
+    },
+
+    watch: {
+        plot_data: function (val, oldVal) {
+            console.log(val, oldVal)
+            update_temp_log(this.wm_name, val)
+        },
+    }
+});
+
+Vue.component('wash-machine-phase', {
+    props: ['wm_id', 'phase_name'],
+    template: '<a class="list-group-item">{{ phase_name }}</a>',
+});
+
+const WashMachines = {
+    template: '<div><wash-machine v-for="(item, key, index) in wash_machines" :key="item.name" v-bind:wm_name="key"></wash-machine></div>',
+    data: function () {
+        return { wash_machines }
+    }
+}
+
+const Fermenters = {
+    template: '<div>Spilka</div>'
+}
+
+const routes = [
+    { path: '/wash_machines', component: WashMachines },
+    { path: '/fermenters', component: Fermenters }
+];
+
+const router = new VueRouter({
+    routes
+});
+
+var vm = new Vue({
+    el: '#pivovar',
+    router,
+});
+
