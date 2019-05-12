@@ -29,9 +29,10 @@ wash_machine = wash_machine.WashMachine.from_config('wash_machine_1')
 
 
 washing_machine_model = api.model('Washing machine', {
+    'name': fields.String,
+    'required_water_temp': fields.Float,
     'current_phase': fields.String,
     'phases': fields.List(fields.String),
-    'required_temp': fields.Float,
 })
 
 
