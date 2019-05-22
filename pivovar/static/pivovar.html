@@ -2,6 +2,7 @@
   <head>
     <script type = "text/javascript" src = "https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.10/vue.js"></script>
     <script type = "text/javascript" src = "https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.0.6/vue-router.js"></script>
+    <script src="https://unpkg.com/vue-i18n/dist/vue-i18n.js"></script>
 
     <script src="https://code.jquery.com/jquery-3.3.1.min.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
@@ -27,11 +28,11 @@
                <span class="icon-bar"></span>
              </button>
 
-             <a class="navbar-brand" href="#">{ gettext("Brewery") }</a>
+             <a class="navbar-brand" href="#">{{ $t("brewery") }}</a>
            </div>
            <ul class="nav navbar-nav">
-             <router-link active-class="active" class="nav-item" to="/wash_machines" tag="li"><a>Myčky</a></router-link>
-             <router-link active-class="active"  class="nav-item" to="/fermenters" tag="li"><a>Spilky</a></router-link>
+             <router-link active-class="active" class="nav-item" to="/wash_machines" tag="li"><a>{{ $t("Wash machines") }}</a></router-link>
+             <router-link active-class="active"  class="nav-item" to="/fermenters" tag="li"><a>{{ $t("Fermenters") }}</a></router-link>
              </li>
            </ul>
          </div>

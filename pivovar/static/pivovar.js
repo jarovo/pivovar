@@ -1,6 +1,29 @@
 wm_url = "http://localhost:5001"
 wash_machines = {}
 
+const messages = {
+  en: {
+    brewery: "Brewery",
+    "water temp in time": 'Water temp in time.',
+  },
+  cs: {
+    brewery: "Pivovar",
+    "Phases": "Fáze",
+    "Keg Washer": 'Myčka sudů:',
+    "water temp in time": 'Teplota vody v čase.',
+    "Wash machines": "Myčky",
+    "Fermenters": "Spilky",
+  }
+}
+
+// Create VueI18n instance with options
+const i18n = new VueI18n({
+  locale: navigator.languages ? navigator.languages[0]
+            : (navigator.language || navigator.userLanguage),
+  fallbackLocale: 'en',
+  messages, // set locale messages
+})
+
 fetch(wm_url + '/wash_machine')
     .then(response => response.json())
     .catch(error => console.error('Error:', error))
@@ -47,15 +70,15 @@ Vue.component('wash-machine', {
     props: ['wm_name'],
     template: `
     <div class="wash-machine" v-bind:id="wm_name" >
-      <h3>Wash machine {{wm_name}}</h3>
+      <h3>{{ $t("Keg Washer") }} {{wm_name}}</h3>
       <div class="col-sm-3">
-        <h3>Phases</h3>
+        <h3>{{ $t("Phases") }}</h3>
         <div class="list-group" id="phases">
           <wash-machine-phase v-for="phase_name in phases" :wm_id="wm_name" :phase_name="phase_name"></wash-machine-phase>
         </div>
       </div>
       <div class="col-sm-9">
-        <h3>{ _("Water temperature in time.") }</h3>
+        <h3>{{ $t("water temp in time") }}</h3>
         <div v-bind:id="plot_id" />
       </div>
     </div>
@@ -101,7 +124,7 @@ const router = new VueRouter({
 });
 
 var vm = new Vue({
+    i18n,
     el: '#pivovar',
     router,
 });
-
