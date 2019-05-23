@@ -66,7 +66,6 @@ function update_temp_log(wash_machine_id, temp_log) {
 
 window.setInterval(update_data, 2000)
 
-console.info(wash_machines['wash_machine_1'])
 Vue.component('wash-machine', {
     props: ['wm_name'],
     template: `
@@ -74,18 +73,31 @@ Vue.component('wash-machine', {
       <h3>{{ $t("Keg Washer") }} {{wm_name}}</h3>
       <div class="col-sm-3">
         <h3>{{ $t("Phases") }}</h3>
-        <ol id="phases" class="list-group" >
+        <draggable
+          id="phases"
+          tag="ol"
+          class="list-group"
+          handle=".handle"
+          ghost-class="ghost"
+          v-model="phases"
+          group="phases"
+        >
           <wash-machine-phase v-for="phase_name in phases" :wm_id="wm_name" :phase_name="phase_name"></wash-machine-phase>
-        </ol>
+        </draggable>
       </div>
       <div class="col-sm-9">
         <h3>{{ $t("water temp in time") }}</h3>
         <div v-bind:id="plot_id" />
       </div>
-    </div>
-    `,
+    </div>`,
+
+    data: function() {
+        return {
+            phases: wash_machines[this.wm_name]['phases'],
+        };
+    },
+
     computed: {
-        phases: function() { return wash_machines[this.wm_name]['phases'] },
         plot_id: function() { return this.wm_name + '_temp_plot' },
         // plot_data: Object.is(wash_machines[this.wm_name], undefined) ? {} : wash_machines[this.wm_name].plot_data;
         plot_data: function() { return wash_machines[this.wm_name].plot_data }
@@ -97,50 +109,14 @@ Vue.component('wash-machine', {
             update_temp_log(this.wm_name, val)
         },
     },
-
-    mounted () {
-        var adjustment;
-
-        $("#phases").sortable({
-            handle: 'i.icon-move',
-            placeholder: '<li class="placeholder list-group-item"></li>',
-            onDrop: function ($item, container, _super) {
-                var $clonedItem = $('<li/>').css({height: 0});
-                $item.before($clonedItem);
-                $clonedItem.animate({'height': $item.height()});
-
-                $item.animate($clonedItem.position(), function  () {
-                    $clonedItem.detach();
-                    _super($item, container);
-                });
-            },
-
-            // set $item relative to cursor position
-            onDragStart: function ($item, container, _super) {
-                var offset = $item.offset(),
-                    pointer = container.rootGroup.pointer;
-
-                adjustment = {
-                    left: pointer.left - offset.left,
-                    top: pointer.top - offset.top
-                };
-
-                _super($item, container);
-            },
-
-            onDrag: function ($item, position) {
-                $item.css({
-                    left: position.left - adjustment.left,
-                    top: position.top - adjustment.top
-                });
-            }
-        });
-    }
 });
 
 Vue.component('wash-machine-phase', {
     props: ['wm_id', 'phase_name'],
-    template: '<li class="list-group-item"><i class="icon-move glyphicon glyphicon-move"></i>{{ phase_name }}</li>',
+    template: `
+      <li class="list-group-item">
+        <i class="handle glyphicon glyphicon-move"></i>{{ phase_name }}
+      </li>`,
 });
 
 const WashMachines = {
