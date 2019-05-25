@@ -1,36 +1,47 @@
-wm_url = "http://localhost:5001"
-wash_machines = {}
+const wm_url = `http://${location.hostname}:5001`;
+
+var pivovar_state = {
+    wash_machines: {},
+
+    updateWashMachine(wm_id, new_state) {
+        Vue.set(this.wash_machines, wm_id, new_state);
+    },
+
+    updateWashMachineTempLog(wm_id, new_state) {
+        Vue.set(this.wash_machines[wm_id], 'plot_data', new_state);
+    }
+};
 
 fetch(wm_url + '/wash_machine')
     .then(response => response.json())
     .catch(error => console.error('Error:', error))
     .then(response => {
-        Vue.set(wash_machines, response.name, response);
-        Vue.set(wash_machines[response.name], 'plot_data', {
-            datetime: [], temps:[]})
-    });
+        pivovar_state.updateWashMachine(response.name, response);
+    }
+);
 
 function update_data() {
-    Object.keys(wash_machines).forEach(wash_machine_id => {
-        const data = { datetime: [ 1, 2, 3], temps: [1, 3, 2] }
-        //$.getJSON(wm_url + 'temp_log', function (data) {
-        //})
-
-        wash_machines[wash_machine_id].plot_data = data
-    })
+    Object.keys(pivovar_state.wash_machines).forEach(wash_machine_id => {
+        $.getJSON(wm_url + '/temp_log', function (temp_log) {
+            pivovar_state.updateWashMachineTempLog(wash_machine_id, temp_log);
+        }).fail(function() {
+            console.error(`Pivovar: Error getting the ${wash_machine_id} temp_log.`);
+        });
+    });
 }
 
 function update_temp_log(wash_machine_id, temp_log) {
     const data = [{
-        x: temp_log['datetime'],
-        y: temp_log['temps'],
+        x: temp_log.datetime,
+        y: temp_log.temps,
         mode: 'lines+markers',
         name: '{templota}',
         line: {'shape': 'spline'},
         type: 'scatter'
-    }]
+    }];
 
-    const layout = {legend: {
+    const layout = {
+      legend: {
         y: 0.5,
         traceorder: 'reversed',
         font: {size: 16},
@@ -38,9 +49,9 @@ function update_temp_log(wash_machine_id, temp_log) {
     }};
 
     Plotly.react(wash_machine_id + "_temp_plot", data, layout);
-};
+}
 
-window.setInterval(update_data, 2000)
+window.setInterval(update_data, 2000);
 
 Vue.component('wash-machine', {
     props: ['wm_name'],
@@ -69,20 +80,19 @@ Vue.component('wash-machine', {
 
     data: function() {
         return {
-            phases: wash_machines[this.wm_name]['phases'],
+            phases: pivovar_state.wash_machines[this.wm_name].phases,
         };
     },
 
     computed: {
-        plot_id: function() { return this.wm_name + '_temp_plot' },
+        plot_id: function() { return this.wm_name + '_temp_plot'; },
         // plot_data: Object.is(wash_machines[this.wm_name], undefined) ? {} : wash_machines[this.wm_name].plot_data;
-        plot_data: function() { return wash_machines[this.wm_name].plot_data }
+        plot_data: function() { return pivovar_state.wash_machines[this.wm_name].plot_data; }
     },
 
     watch: {
         plot_data: function (val, oldVal) {
-            console.log(val, oldVal)
-            update_temp_log(this.wm_name, val)
+            update_temp_log(this.wm_name, val);
         },
     },
 });
@@ -96,15 +106,21 @@ Vue.component('wash-machine-phase', {
 });
 
 const WashMachines = {
-    template: '<div><wash-machine v-for="(item, key, index) in wash_machines" :key="item.name" v-bind:wm_name="key"></wash-machine></div>',
+    template: `
+        <div>
+            <wash-machine v-for="(item, key, index) in wash_machines"
+                          :key="item.name"
+                          v-bind:wm_name="key"
+            ></wash-machine>
+        </div>`,
     data: function () {
-        return { wash_machines }
+        return { wash_machines: pivovar_state.wash_machines  };
     }
-}
+};
 
 const Fermenters = {
     template: '<div>Spilka</div>'
-}
+};
 
 const routes = [
     { path: '/wash_machines', component: WashMachines },
@@ -120,3 +136,4 @@ var pivovar = new Vue({
     el: '#pivovar',
     router,
 });
+
