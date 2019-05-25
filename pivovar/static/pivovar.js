@@ -1,30 +1,6 @@
 wm_url = "http://localhost:5001"
 wash_machines = {}
 
-const messages = {
-  en: {
-    brewery: "Brewery",
-    "water temp in time": 'Water temp in time.',
-  },
-  cs: {
-    brewery: "Pivovar",
-    "Phases": "Fáze",
-    "Keg Washer": 'Myčka sudů:',
-    "water temp in time": 'Teplota vody v čase.',
-    "Wash machines": "Myčky",
-    "Fermenters": "Spilky",
-  }
-}
-
-// Create VueI18n instance with options
-const i18n = new VueI18n({
-  locale: navigator.languages ? navigator.languages[0]
-            : (navigator.language || navigator.userLanguage),
-  fallbackLocale: 'en',
-  messages, // set locale messages
-})
-
-
 fetch(wm_url + '/wash_machine')
     .then(response => response.json())
     .catch(error => console.error('Error:', error))
@@ -70,7 +46,7 @@ Vue.component('wash-machine', {
     props: ['wm_name'],
     template: `
     <div class="wash-machine" v-bind:id="wm_name" >
-      <h3>{{ $t("Keg Washer") }} {{wm_name}}</h3>
+      <h3>{{ $t("Keg Washer", { wm_name }) }}</h3>
       <div class="col-sm-3">
         <h3>{{ $t("Phases") }}</h3>
         <draggable
@@ -139,7 +115,7 @@ const router = new VueRouter({
     routes
 });
 
-var vm = new Vue({
+var pivovar = new Vue({
     i18n,
     el: '#pivovar',
     router,
