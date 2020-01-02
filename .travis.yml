@@ -4,5 +4,11 @@ language: python
 python:
   - "2.7"
   - "3.7"
-install: pip install tox-travis
+  - "3.8"
+install: pip install tox-travis -r requirements-dev.txt
 script: tox
+jobs:
+  include:
+    - name: pre-commit
+      python: 3.8
+      env: TOXENV=pre-commit
