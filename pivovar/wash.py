@@ -17,6 +17,7 @@ CORS(app)
 
 
 class DefaultConfig(object):
+    HOST = '0.0.0.0'
     PORT = 5001
     INSTANCE_CONFIG_FILE = 'wash.cfg'
 
@@ -77,7 +78,7 @@ def main():
     else:
         logger.debug('Startup: pid %d is the active werkzeug' % os.getpid())
         init()
-    app.run(port=app.config['PORT'], debug=use_debug)
+    app.run(host=app.config['HOST'], port=app.config['PORT'], debug=use_debug)
 
 
 if __name__ == '__main__':
