@@ -28,7 +28,7 @@ ALIASES = {
     ('uart', '1_01'): '',
     ('relay', '2_01'): 'al_pump',
     ('relay', '2_02'): 'al_air',
-    ('relay', '2_03'): 'al_lye_or_water',
+    ('relay', '2_03'): 'al_water_or_lye',
     ('relay', '2_04'): 'al_co2',
     ('relay', '2_05'): 'al_cold_water',
     ('relay', '2_06'): 'al_drain_or_recirculation',
