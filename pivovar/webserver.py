@@ -1,6 +1,6 @@
 from pivovar import configure_app
 import requests
-from flask import Flask, render_template, send_from_directory, request
+from flask import Flask, render_template, request
 from flask_babel import Babel
 from urllib.parse import urljoin
 
@@ -24,11 +24,6 @@ def get_locale():
     # example.  The best match wins.
     loc = request.accept_languages.best_match(['cs', 'en'])
     return loc
-
-
-@app.route('/<path:filename>')
-def static_files(filename):
-    return send_from_directory('static', filename)
 
 
 @app.route('/')
