@@ -4,7 +4,6 @@ PyYaml
 flask
 flask-cors
 flask_restplus
-flask_babel
 
 Pyserial # For support_tools
 PyModbus # For support_tools
