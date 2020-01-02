@@ -8,7 +8,9 @@ unipi_address = 'fake_address'
 @patch('pivovar.set_aliases_m103.requests')
 def test_check_m103(requests_mock):
     requests_mock.get.return_value.json.return_value = {
-        'dev': 'neuron', 'model': 'M103'}
+        'dev': 'neuron',
+        'model': 'M103',
+    }
     set_aliases_m103.check_m103(unipi_address)
 
 

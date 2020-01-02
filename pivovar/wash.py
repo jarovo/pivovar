@@ -29,12 +29,15 @@ api = Api(app)
 wash_machine = wash_machine.WashMachine.from_config('wash_machine_1')
 
 
-washing_machine_model = api.model('Washing machine', {
-    'name': fields.String,
-    'required_water_temp': fields.Float,
-    'current_phase': fields.String,
-    'phases': fields.List(fields.String),
-})
+washing_machine_model = api.model(
+    'Washing machine',
+    {
+        'name': fields.String,
+        'required_water_temp': fields.Float,
+        'current_phase': fields.String,
+        'phases': fields.List(fields.String),
+    },
+)
 
 
 @api.route('/temp_log')
@@ -42,10 +45,11 @@ class RealTemps(Resource):
     def get(self):
         return {
             'datetime': [
-                item[0].strftime('%Y-%m-%d %H:%M:%S') for item in
-                wash_machine.temp_log
+                item[0].strftime('%Y-%m-%d %H:%M:%S')
+                for item in wash_machine.temp_log
             ],
-            'temps': [item[1] for item in wash_machine.temp_log]}
+            'temps': [item[1] for item in wash_machine.temp_log],
+        }
 
 
 @api.route('/wash_machine')
@@ -56,11 +60,13 @@ class WashMachineResource(Resource):
 
 
 def init():
-    wash_thread = Thread(name='washing machine',
-                         target=wash_machine.wash_the_kegs)
+    wash_thread = Thread(
+        name='washing machine', target=wash_machine.wash_the_kegs
+    )
 
-    temps_update_thread = Thread(name='temps updater',
-                                 target=wash_machine.temps_update)
+    temps_update_thread = Thread(
+        name='temps updater', target=wash_machine.temps_update
+    )
 
     temps_update_thread.daemon = True
     temps_update_thread.start()

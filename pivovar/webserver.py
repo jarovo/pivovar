@@ -35,7 +35,7 @@ def wash():
         'wash.html',
         temp_log_url=urljoin(wash_url, '/temp_log'),
         wash_machine_url=urljoin(wash_url, '/wash_machine'),
-        wash_machine=wm
+        wash_machine=wm,
     )
 
 

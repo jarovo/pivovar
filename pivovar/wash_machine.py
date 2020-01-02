@@ -10,7 +10,7 @@ from pivovar.jsonrpc import Client
 
 
 logger = logging.getLogger('phases')
-ERROR_SLEEP_TIME = 1.
+ERROR_SLEEP_TIME = 1.0
 
 
 def N_(message):
@@ -25,8 +25,10 @@ def phase(name):
             ret = f(self, *args, **kwds)
             self.phase_finished(name)
             return ret
+
         wrapper.phase_name = name
         return wrapper
+
     return decorator
 
 
@@ -39,17 +41,32 @@ def setdeepattr(o, path, val):
 
 @attr.s
 class WashMachine(object):
-    ALL_RLYS = ('al_air', 'al_pump', 'al_water_or_lye', 'al_co2',
-                'al_cold_water', 'al_drain_or_recirculation', 'al_drain')
+    ALL_RLYS = (
+        'al_air',
+        'al_pump',
+        'al_water_or_lye',
+        'al_co2',
+        'al_cold_water',
+        'al_drain_or_recirculation',
+        'al_drain',
+    )
 
-    ALL_OUTPUTS = ('al_error_lamp', 'al_ready_lamp',
-                   'al_waiting_for_input_lamp')
+    ALL_OUTPUTS = (
+        'al_error_lamp',
+        'al_ready_lamp',
+        'al_waiting_for_input_lamp',
+    )
 
-    ALL_INPUTS = ('al_total_stop', 'al_fuse_ok', 'al_keg_present',
-                  'al_keg_50l', 'al_aux_wash')
+    ALL_INPUTS = (
+        'al_total_stop',
+        'al_fuse_ok',
+        'al_keg_present',
+        'al_keg_50l',
+        'al_aux_wash',
+    )
 
     name = attr.ib(type=str)
-    required_water_temp = attr.ib(type=float, default=80.)
+    required_water_temp = attr.ib(type=float, default=80.0)
     unipi_jsonrpc_url = attr.ib(type=str, default='http://localhost/rpc')
 
     def __attrs_post_init__(self):
@@ -60,20 +77,20 @@ class WashMachine(object):
         self.temp_log = []
         # TODO Solve the problems of double init
         self.real_temp_update_seconds = 15
-        self.tick_secs = 1.
+        self.tick_secs = 1.0
         self.heating_sleep_seconds = 5
 
         self.wash_cycle = [
-           self.check,
-           self.wait_for_keg,
-           self.heating,
-           self.prewash,
-           self.drain,
-           self.wash_with_lye,
-           self.rinse_with_cold_water,
-           self.wash_with_hot_water,
-           self.dry,
-           self.fill_with_co2
+            self.check,
+            self.wait_for_keg,
+            self.heating,
+            self.prewash,
+            self.drain,
+            self.wash_with_lye,
+            self.rinse_with_cold_water,
+            self.wash_with_hot_water,
+            self.dry,
+            self.fill_with_co2,
         ]
 
     @property
@@ -91,9 +108,11 @@ class WashMachine(object):
         self.unipi_jsonrpc_url = wm_config.get('unipi_jsonrpc_url')
         self.required_water_temp = wm_config.getfloat('required_water_temp')
         self.heating_sleep_seconds = wm_config.getfloat(
-            'heating_sleep_seconds')
+            'heating_sleep_seconds'
+        )
         self.realtime_temp_update_seconds = wm_config.getfloat(
-            'realtime_temp_update_seconds')
+            'realtime_temp_update_seconds'
+        )
         self.tick_secs = wm_config.getfloat('tick_secs')
 
         # TODO Resolve use of this
@@ -107,23 +126,34 @@ class WashMachine(object):
 
     @property
     def temp_samples_count_limit(self):
-        return int(60*60*24 / self.real_temp_update_seconds)
+        return int(60 * 60 * 24 / self.real_temp_update_seconds)
 
     def init_io(self):
         self.io = wm_io.IOGroup('io')
-        self.io._add_group(wm_io.IOGroup.from_aliases(
-            'rly', self, wm_io.Switchable, self.ALL_RLYS))
-        self.io._add_group(wm_io.IOGroup.from_aliases(
-            'inp', self, wm_io.Input, self.ALL_INPUTS))
-        self.io._add_group(wm_io.IOGroup.from_aliases(
-            'out', self, wm_io.Switchable, self.ALL_OUTPUTS))
+        self.io._add_group(
+            wm_io.IOGroup.from_aliases(
+                'rly', self, wm_io.Switchable, self.ALL_RLYS
+            )
+        )
+        self.io._add_group(
+            wm_io.IOGroup.from_aliases(
+                'inp', self, wm_io.Input, self.ALL_INPUTS
+            )
+        )
+        self.io._add_group(
+            wm_io.IOGroup.from_aliases(
+                'out', self, wm_io.Switchable, self.ALL_OUTPUTS
+            )
+        )
 
         mv = wm_io.IOGroup('mv')
         self.io._add_group(mv)
-        mv._add(wm_io.WaterOrLye(
-            'water_or_lye', self, 'al_water_or_lye'))
-        mv._add(wm_io.DrainOrRecirculation(
-            'drain_or_recirculation', self, 'al_drain_or_recirculation'))
+        mv._add(wm_io.WaterOrLye('water_or_lye', self, 'al_water_or_lye'))
+        mv._add(
+            wm_io.DrainOrRecirculation(
+                'drain_or_recirculation', self, 'al_drain_or_recirculation'
+            )
+        )
 
         water_temp = wm_io.TemperatureSensor('water_temp', self, None)
         self.io._add(water_temp)
@@ -138,8 +168,11 @@ class WashMachine(object):
 
     @property
     def phases(self):
-        return [v.phase_name for v in vars(type(self)).values()
-                if getattr(v, 'phase_name', None)]
+        return [
+            v.phase_name
+            for v in vars(type(self)).values()
+            if getattr(v, 'phase_name', None)
+        ]
 
     def phase_started(self, name):
         self.current_phase = name
@@ -152,14 +185,16 @@ class WashMachine(object):
             self.temp_log.append((time, None))
             logger.info(
                 'Added missing value of wash machine water temperature'
-                'into the temp_log')
+                'into the temp_log'
+            )
         else:
             self.temp_log.append((time, temp))
             logger.info(
                 'Added wash machine water temperature %0.1f into the temp_log',
-                temp)
+                temp,
+            )
 
-        self.temp_log = self.temp_log[-self.temp_samples_count_limit:]
+        self.temp_log = self.temp_log[-self.temp_samples_count_limit :]
 
     def temps_update(self):
         while self.keep_running():
@@ -194,7 +229,7 @@ class WashMachine(object):
         if self.is_50l_keg_selected():
             return 1
         else:
-            return .75
+            return 0.75
 
     def wait_until_inputs_ok(self):
         previous_is_total_stop_pressed = False
@@ -205,20 +240,22 @@ class WashMachine(object):
             if self.is_total_stop_pressed():
                 if not previous_is_total_stop_pressed:
                     logging.info(
-                        'TOTAL_STOP is pressed. Stopping the processes.')
+                        'TOTAL_STOP is pressed. Stopping the processes.'
+                    )
                 previous_is_total_stop_pressed = True
                 retry = True
 
             if self.is_fuse_blown():
                 if not previous_is_fuse_blown:
                     logging.info(
-                        'No voltage on peripherals fuse. Is it blown?')
+                        'No voltage on peripherals fuse. Is it blown?'
+                    )
                 previous_is_fuse_blown = True
                 retry = True
 
             if not retry:
                 break
-            time.sleep(.1)
+            time.sleep(0.1)
 
     def delay(self, ticks):
         time.sleep(ticks * self.tick_secs)
@@ -251,19 +288,20 @@ class WashMachine(object):
     @phase(N_("reset"))
     def reset(self):
         self.io.out.waiting_for_input_lamp.turn_off()
-        rlys_to_switch = (rly for rly in self.io.rly.all_leafs()
-                          if rly.read_state())
+        rlys_to_switch = (
+            rly for rly in self.io.rly.all_leafs() if rly.read_state()
+        )
         for rly in rlys_to_switch:
             rly.turn_off()
 
-        valves_to_switch = [mv for mv in self.io.mv.all_leafs()
-                            if mv.read_state()]
+        valves_to_switch = [
+            mv for mv in self.io.mv.all_leafs() if mv.read_state()
+        ]
         if any(valves_to_switch):
             for mv in self.io.mv.all_leafs():
                 mv.turn_off(wait=False)
 
-            wait_time = max(mv.transition_time for mv
-                            in valves_to_switch)
+            wait_time = max(mv.transition_time for mv in valves_to_switch)
             time.sleep(wait_time)
 
     @phase(N_('check'))
@@ -274,15 +312,18 @@ class WashMachine(object):
                 failed.append(io)
 
         if failed:
-            raise Exception('Failed to find some IO!:\n    {}'
-                            .format('\n    '.join(str(io) for io in failed)))
+            raise Exception(
+                'Failed to find some IO!:\n    {}'.format(
+                    '\n    '.join(str(io) for io in failed)
+                )
+            )
 
     @phase(N_('waiting for keg'))
     def wait_for_keg(self):
         logging.info('Waiting for keg.')
         self.io.out.waiting_for_input_lamp.turn_on()
         while not self.is_keg_present():
-            time.sleep(.01)
+            time.sleep(0.01)
             self.wait_until_inputs_ok()
 
     @phase(N_('heating'))
@@ -294,12 +335,15 @@ class WashMachine(object):
                 'Waiting for water (actual temperature %.2f) '
                 'to get to required temperature: %.2f.',
                 actual_temp,
-                self.required_water_temp)
+                self.required_water_temp,
+            )
             time.sleep(self.heating_sleep_seconds)
             actual_temp = self.io.water_temp.read_temperature()
         logging.info(
             'Water ready (actual temperature %.2f. Required %.2f)',
-            actual_temp, self.required_water_temp)
+            actual_temp,
+            self.required_water_temp,
+        )
         self.wait_until_inputs_ok()
 
     @phase(N_('prewashing'))
@@ -364,8 +408,11 @@ class WashMachine(object):
                         phase()
                         break
                     except Exception as exc:
-                        logger.exception('Exception happened in phase %s: %s',
-                                         phase.phase_name, exc)
+                        logger.exception(
+                            'Exception happened in phase %s: %s',
+                            phase.phase_name,
+                            exc,
+                        )
                         self.signal_error(True)
                         time.sleep(ERROR_SLEEP_TIME)
 

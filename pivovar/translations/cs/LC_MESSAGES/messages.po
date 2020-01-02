@@ -81,4 +81,3 @@ msgstr "Teplota vody v čase."
 #: pivovar/templates/wash.html:24
 msgid "temperature"
 msgstr "teplota"
-

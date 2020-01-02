@@ -27,11 +27,17 @@ class Client(object):
 
     def _jsonrpc_args_method(self, method, *args):
         self.counter += 1
-        resp = self.session.post(self.url, data=json.dumps({
-            'id': self.counter,
-            'jsonrpc': '2.0',
-            'method': method,
-            'params': args})).json()
+        resp = self.session.post(
+            self.url,
+            data=json.dumps(
+                {
+                    'id': self.counter,
+                    'jsonrpc': '2.0',
+                    'method': method,
+                    'params': args,
+                }
+            ),
+        ).json()
 
         error = resp.get('error')
         if error:

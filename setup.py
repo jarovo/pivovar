@@ -8,13 +8,15 @@ from setuptools import setup
 def create_mo_files():
     data_files = []
     localedir = 'pivovar/translations'
-    po_dirs = [localedir + '/' + l + '/LC_MESSAGES/'
-               for l in next(os.walk(localedir))[1]]
+    po_dirs = [
+        localedir + '/' + l + '/LC_MESSAGES/'
+        for l in next(os.walk(localedir))[1]
+    ]
     for d in po_dirs:
         mo_files = []
-        po_files = [f
-                    for f in next(os.walk(d))[2]
-                    if os.path.splitext(f)[1] == '.po']
+        po_files = [
+            f for f in next(os.walk(d))[2] if os.path.splitext(f)[1] == '.po'
+        ]
         for po_file in po_files:
             filename, extension = os.path.splitext(po_file)
             mo_file = filename + '.mo'
@@ -25,8 +27,4 @@ def create_mo_files():
     return data_files
 
 
-setup(
-    setup_requires=['pbr'],
-    pbr=True,
-    data_files=create_mo_files()
-)
+setup(setup_requires=['pbr'], pbr=True, data_files=create_mo_files())

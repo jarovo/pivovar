@@ -5,7 +5,7 @@ from six.moves import input
 import requests
 from urllib.parse import urljoin
 
-full_cal_value = 1.
+full_cal_value = 1.0
 
 
 class Scale(object):
@@ -15,8 +15,11 @@ class Scale(object):
         self.full_value = full_value
 
     def load(self, raw):
-        return ((raw - self.raw_zero)
-                * self.full_value / (self.raw_full - self.raw_zero))
+        return (
+            (raw - self.raw_zero)
+            * self.full_value
+            / (self.raw_full - self.raw_zero)
+        )
 
     def __str__(self):
         return (
@@ -45,8 +48,10 @@ def calibrate(scale, evok_baseurl):
 
 def main():
     import argparse
+
     parser = argparse.ArgumentParser(
-        description="Read from TE485 through EVOK.")
+        description="Read from TE485 through EVOK."
+    )
     parser.add_argument('evok_baseurl', help="URL to evok")
     args = parser.parse_args()
 
@@ -58,11 +63,13 @@ def main():
     while True:
         status, cal, raw = evok_read(evok_baseurl)
         load = scale.load(raw)
-        print(f'load: {load:.3f} status: {status:b} cal: {cal} raw: {raw}; '
-              f'{scale}')
+        print(
+            f'load: {load:.3f} status: {status:b} cal: {cal} raw: {raw}; '
+            f'{scale}'
+        )
         print(('.' * 40) + ('|' * 40))
-        print('=' * int(40*load))
-        sleep(.1)
+        print('=' * int(40 * load))
+        sleep(0.1)
 
 
 if __name__ == '__main__':

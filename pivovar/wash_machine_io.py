@@ -91,8 +91,9 @@ class TemperatureSensor(UniPiIO):
     address = attr.ib(type=str)
 
     def _get(self):
-        return OneWireSensor(*self._get_unipi_jsonrpc().sensor_get(
-            self.address))
+        return OneWireSensor(
+            *self._get_unipi_jsonrpc().sensor_get(self.address)
+        )
 
     def is_lost(self):
         return self._get().lost
@@ -115,10 +116,12 @@ class TemperatureSensor(UniPiIO):
         self.address = section.get(self.conf_key + '.address', self.address)
 
     def __str__(self):
-        return '{}({}, {}, {})'.format(self.__class__.__name__,
-                                       self._facility.name,
-                                       self.name,
-                                       self.address)
+        return '{}({}, {}, {})'.format(
+            self.__class__.__name__,
+            self._facility.name,
+            self.name,
+            self.address,
+        )
 
 
 class Input(UniPiReadable):
@@ -128,7 +131,7 @@ class Input(UniPiReadable):
 
 @attr.s
 class MotorValve(Switchable):
-    transition_time = attr.ib(type=float, default=3.)
+    transition_time = attr.ib(type=float, default=3.0)
 
     def turn_on(self, wait=True):
         super(MotorValve, self).turn_on()
@@ -146,7 +149,8 @@ class MotorValve(Switchable):
     def _read_config(self, section):
         super(MotorValve, self)._read_config(section)
         self.transition_time = section.getfloat(
-            self.conf_key + '.transition_time', self.transition_time)
+            self.conf_key + '.transition_time', self.transition_time
+        )
 
 
 class DrainOrRecirculation(MotorValve):

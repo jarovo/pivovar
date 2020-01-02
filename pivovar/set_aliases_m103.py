@@ -50,12 +50,14 @@ def set_aliases(address):
 def set_alias(address, dev, dev_id, alias):
     logging.info('Setting alias for %s %s: %s', dev, dev_id, alias)
     url = 'http://{address}/rest/{dev}/{dev_id}'.format(
-            address=address, dev=dev, dev_id=dev_id)
+        address=address, dev=dev, dev_id=dev_id
+    )
     resp = requests.post(url, data={'alias': alias})
     resp = resp.json()
     unipi_alias = resp['result']['alias'] if alias else ''
     assert unipi_alias == alias, 'Failed to set {}. Current value: {}'.format(
-            alias, unipi_alias)
+        alias, unipi_alias
+    )
     assert resp['success']
 
 
@@ -84,8 +86,9 @@ def check_m103(address):
 def main():
     logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description='UniPi M103 initial setup')
-    parser.add_argument('unipi_address', type=str,
-                        help='Address to of UniPi M103.')
+    parser.add_argument(
+        'unipi_address', type=str, help='Address to of UniPi M103.'
+    )
     args = parser.parse_args()
 
     check_m103(args.unipi_address)

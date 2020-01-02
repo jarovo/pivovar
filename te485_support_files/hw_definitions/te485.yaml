@@ -21,7 +21,7 @@ modbus_register_blocks:
       count       : 6
       frequency   : 1
 # This defines the devices mapped to the registers above. As custom devices are very unlikely to support any Neuron features, the only devices which should be mapped are "REGISTER"s
-modbus_features: 
+modbus_features:
     - type        : REGISTER
       major_group : 1
       count       : 3
