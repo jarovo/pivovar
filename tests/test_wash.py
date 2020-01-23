@@ -171,7 +171,7 @@ def test_real_temps(flask_client):
     wash.wash_machine.add_temp(date, 1)
     date = datetime(2018, 8, 24, 15, 3, 56)
     wash.wash_machine.add_temp(date, None)
-    response = json.loads(flask_client.get('/temp_log').data)
+    response = json.loads(flask_client.get('/temp_log').data.decode())
     expected = {
         'datetime': [
             "2018-08-24 15:03:54",
